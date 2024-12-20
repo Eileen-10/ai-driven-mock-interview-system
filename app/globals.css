@@ -10,6 +10,20 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  ,
+  .bg-radial-gradient {
+    background: radial-gradient(
+      /* Bottom purple version
+      125% 125% at 50% 10%,
+      rgba(5, 6, 11, 1) 60%,
+      rgba(156, 2, 206, 0.8) 100% */
+        ellipse 70% 80% at 50% -55%,
+      rgba(156, 2, 206, 0.8) 0.5%,
+      rgba(5, 6, 11, 1) 100%
+    );
+    background-repeat: no-repeat;
+    background-size: cover;
+  }
 }
 
 @layer base {
@@ -74,13 +88,8 @@ body {
   }
   /* Background gradient color */
   body {
-    @apply bg-neutral-950 text-foreground;
-    background-image: radial-gradient(
-      ellipse 80% 80% at 50% -20%,
-      rgba(156, 2, 206, 0.3),
-      rgba(255, 255, 255, 0)
-    );
-    background-size: cover;
-    background-repeat: no-repeat;
+    @apply bg-background text-foreground;
+    @apply bg-radial-gradient; /* Apply the custom radial gradient background */
+    min-height: 100vh;
   }
 }
