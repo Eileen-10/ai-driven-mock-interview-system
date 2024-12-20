@@ -72,7 +72,15 @@ body {
   * {
     @apply border-border;
   }
+  /* Background gradient color */
   body {
-    @apply bg-background text-foreground;
+    @apply bg-neutral-950 text-foreground;
+    background-image: radial-gradient(
+      ellipse 80% 80% at 50% -20%,
+      rgba(156, 2, 206, 0.3),
+      rgba(255, 255, 255, 0)
+    );
+    background-size: cover;
+    background-repeat: no-repeat;
   }
 }
