@@ -21,7 +21,7 @@ function Header() {
             <li className={`hover:font-bold transition-all cursor-pointer
                 ${path=='/about' && 'font-bold'}`} style={{textShadow: path === '/about' ? '0 10px 5px rgba(255, 140, 0, 0.3)' : 'none',}}>About</li>
             <li className={`hover:font-bold transition-all cursor-pointer
-                ${path=='/dashboard' && 'font-bold'}`} style={{textShadow: path === '/dashboard' ? '0 10px 5px rgba(255, 140, 0, 0.3)' : 'none',}}>Mock Interview</li>
+                ${path.startsWith('/dashboard') && 'font-bold'}`} style={{textShadow: path.startsWith('/dashboard') ? '0 10px 5px rgba(255, 140, 0, 0.3)' : 'none',}}>Mock Interview</li>
             <li className={`hover:font-bold transition-all cursor-pointer
                 ${path=='/questionbank' && 'font-bold'}`} style={{textShadow: path === '/questionbank' ? '0 10px 5px rgba(255, 140, 0, 0.3)' : 'none',}}>Question Bank</li>
         </ul>
