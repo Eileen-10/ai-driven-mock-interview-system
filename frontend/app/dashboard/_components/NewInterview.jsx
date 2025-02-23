@@ -19,17 +19,83 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from "@/components/ui/label"
+import { LoaderCircle } from 'lucide-react'
+import { db } from '@/utils/db'
+import { InterviewPrompt } from '@/utils/schema'
+import { v4 as uuidv4 } from 'uuid'
+import { useUser } from '@clerk/nextjs'
+import moment from 'moment'
 
 function NewInterview() {
     const [openPrompt, setOpenPrompt]=useState(false)
-    const [jobRole, setJobRole]=useState();
-    const [jobDesc, setJobDesc]=useState();
-    const [quesType, setQuesType]=useState('behavioural');  // Set default to "behavioural"
-    const [supportDoc, setSupportDoc]=useState();
+    const [jobRole, setJobRole]=useState();                 // Job Role/Position
+    const [jobDesc, setJobDesc]=useState();                 // Job Description
+    const [quesType, setQuesType]=useState('behavioural');  // Question Type (default: "behavioural")
+    const [supportDoc, setSupportDoc]=useState(null);       // Supporting Document
+    let fileName = supportDoc ? supportDoc.name : null;     // Extract pdf file name
+    const [loading, setLoading]=useState(false);
+    const [jsonResponse, setJsonResponse]=useState([]);
+    const {user}=useUser();
 
-    const onSubmit=(e)=>{
+    const handleFileChange = (event) => {
+        setSupportDoc(event.target.files[0]); // Set the actual file
+    };
+
+    const onSubmit=async(e)=>{
+        setLoading(true)
         e.preventDefault()
-        console.log(jobRole, jobDesc, quesType, supportDoc)
+        // console.log(jobRole, jobDesc, quesType, supportDoc)
+
+        const formData = new FormData();
+        formData.append("job_role", jobRole);
+        formData.append("job_desc", jobDesc);
+        formData.append("ques_type", quesType);
+        if (supportDoc) {
+            formData.append("support_doc", supportDoc);
+        }
+
+        // Call for OCR & LLM from FastAPI
+        // To generate Interview Questions & Suggested Answers
+        try {
+            const response = await fetch("http://127.0.0.1:8000/generate-question", {
+                method: "POST",
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Generated Questions & Suggested Answers:", data.questions);
+            setJsonResponse(data.questions);
+
+            // Store in database
+            if(data.questions){
+                const resp=await db.insert(InterviewPrompt)
+                .values({
+                    mockID:uuidv4(),
+                    jsonMockResponse:data.questions,
+                    jobRole:jobRole,
+                    jobDesc:jobDesc,
+                    quesType:quesType,
+                    supportingDoc:fileName,
+                    createdBy:user?.primaryEmailAddress?.emailAddress,
+                    createdAt:moment().format('DD-MM-yyyy')
+                }).returning({mockID:InterviewPrompt.mockID})
+                console.log("Inserted ID:", resp)
+                if(resp){
+                    setOpenPrompt(false);   // Close the prompt dialog
+                }
+            }else{
+                console.log("Error storing data");
+            }
+            
+
+        } catch (error) {
+            console.error("Error generating questions & answers:", error);
+        }
+        setLoading(false);
     }
 
   return (
@@ -74,13 +140,19 @@ function NewInterview() {
                                 <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
                                 <div className="grid w-full max-w-sm items-center gap-1.5">
                                     <Input id="supportDoc" type="file" accept="application/pdf" className="bg-gray-100 p-2 rounded-md" 
-                                    onChange={(event)=>setSupportDoc(event.target.value)}/>
+                                    onChange={handleFileChange}/>
                                 </div>
                             </div>
                         </div>
                         <div className='flex gap-5 justify-center'>
                             <Button type="button" variant="outline" onClick={()=>setOpenPrompt(false)}>Cancel</Button>
-                            <Button type="submit">Launch</Button>
+                            <Button type="submit" disabled={loading}>
+                                {loading?
+                                <>
+                                <LoaderCircle className='animate-spin'/>Generating questions..
+                                </>:'Launch'
+                                }
+                            </Button>
                         </div>
                         </form>
                     </DialogDescription>
