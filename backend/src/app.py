@@ -1,47 +1,50 @@
-# from fastapi import FastAPI
-# from fastapi.responses import JSONResponse
-
-# app = FastAPI(
-#     title="RAG API",
-#     description="A simple RAG API",
-#     version="0.1"
-# )
-
-# @app.post("/chat", description="Chat with the RAG API through this endpoint")
-# def chat(message: str):
-#     return JSONResponse(content={"Your message": message}, status_code=200)
-
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File, Form
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from langchain_google_genai import ChatGoogleGenerativeAI
 import os
+from src.OCR import extract_text_from_pdf   # Import OCR function
+from src.LLM import generate_interview_questions    # Import LLM function
 
-# Initialize FastAPI app
 app = FastAPI()
 
-# Set your Google Gemini API key
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAmMkJEZMQ1tBRRzCW7Gta-ydr9nFCOz2w"
+# Enable CORS for frontend communication
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # Allow requests from Next.js frontend
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
-# Define request body model
+# Define request model for question generation
 class InterviewRequest(BaseModel):
-    role: str  # User specifies the job role
+    job_role: str
+    job_desc: str
+    ques_type: str
 
-# LangChain - Initialize Gemini model
-llm = ChatGoogleGenerativeAI(model="gemini-pro")  
+@app.post("/generate-question/")
+async def generate_question(
+    job_role: str = Form(...), 
+    job_desc: str = Form(...), 
+    ques_type: str = Form(...), 
+    support_doc: UploadFile = File(None)
+):
+    """
+    Generates interview questions based on job role, description, question type, 
+    and an optional supporting document (PDF).
+    """
+    doc_text = ""
 
-@app.post("/generate-question")
-def generate_question(request: InterviewRequest):
-    prompt = f"Generate an interview question for a {request.role} role."
-    response = llm.invoke(prompt)
-    return JSONResponse(content={"question": response.content}, status_code=200)
+    # Process PDF if uploaded
+    if support_doc:
+        pdf_path = f"temp_{support_doc.filename}"
+        with open(pdf_path, "wb") as buffer:
+            buffer.write(await support_doc.read())
+        doc_text = extract_text_from_pdf(pdf_path)
+        os.remove(pdf_path)  # Cleanup temp file
 
-class AnswerRequest(BaseModel):
-    question: str
-    answer: str
-
-@app.post("/evaluate-answer")
-def evaluate_answer(request: AnswerRequest):
-    prompt = f"Evaluate this answer based on correctness, depth, and clarity:\n\nQuestion: {request.question}\nAnswer: {request.answer}"
-    response = llm.invoke(prompt)
-    return JSONResponse(content={"evaluation": response.content}, status_code=200)
+    # Generate interview questions & suggested answers
+    questions = generate_interview_questions(job_role, job_desc, ques_type, doc_text)
+    
+    return JSONResponse(content={"questions": questions}, status_code=200)
