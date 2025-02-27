@@ -6,7 +6,7 @@ export const InterviewPrompt=pgTable('interviewPrompt',{
     id:serial('id').primaryKey(),
     jsonMockResponse:text('jsonMockResponse').notNull(), //Response
     jobRole:varchar('jobRole').notNull(),   //Job Title
-    jobDesc:varchar('jobDescr').notNull(),  //Job Scope
+    jobDesc:varchar('jobDesc').notNull(),  //Job Scope
     quesType: quesTypeEnum(),               //Question Type
     supportingDoc:text('supportingDoc'),    //**Supporting Documents
     createdBy:varchar('createdBy').notNull(),

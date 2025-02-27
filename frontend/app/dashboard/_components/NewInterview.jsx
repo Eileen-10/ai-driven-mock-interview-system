@@ -25,6 +25,7 @@ import { InterviewPrompt } from '@/utils/schema'
 import { v4 as uuidv4 } from 'uuid'
 import { useUser } from '@clerk/nextjs'
 import moment from 'moment'
+import { useRouter } from 'next/navigation'
 
 function NewInterview() {
     const [openPrompt, setOpenPrompt]=useState(false)
@@ -35,6 +36,7 @@ function NewInterview() {
     let fileName = supportDoc ? supportDoc.name : null;     // Extract pdf file name
     const [loading, setLoading]=useState(false);
     const [jsonResponse, setJsonResponse]=useState([]);
+    const router=useRouter();
     const {user}=useUser();
 
     const handleFileChange = (event) => {
@@ -86,6 +88,7 @@ function NewInterview() {
                 console.log("Inserted ID:", resp)
                 if(resp){
                     setOpenPrompt(false);   // Close the prompt dialog
+                    router.push('/dashboard/mockInterview/interviewSession/'+resp[0]?.mockID)
                 }
             }else{
                 console.log("Error storing data");

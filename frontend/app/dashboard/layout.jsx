@@ -14,7 +14,7 @@ function DashboardLayout({children}) {
         </div>
 
         {/* Content */}
-        <div className='flex-grow bg-white rounded-3xl shadow-lg' style={{ marginRight: '20px', marginTop: '6px', marginBottom: '20px' }}>
+        <div className='flex-grow bg-white rounded-3xl shadow-lg overflow-auto' style={{ marginRight: '20px', marginTop: '6px', marginBottom: '20px' }}>
           {children}
         </div>
       </div>
