@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from "@/components/ui/label"
-import { LoaderCircle } from 'lucide-react'
+import { ConeIcon, LoaderCircle } from 'lucide-react'
 import { db } from '@/utils/db'
 import { InterviewPrompt } from '@/utils/schema'
 import { v4 as uuidv4 } from 'uuid'
@@ -77,7 +77,7 @@ function NewInterview() {
                 const resp=await db.insert(InterviewPrompt)
                 .values({
                     mockID:uuidv4(),
-                    jsonMockResponse:data.questions,
+                    jsonMockResponse:JSON.stringify(data.questions),
                     jobRole:jobRole,
                     jobDesc:jobDesc,
                     quesType:quesType,
@@ -93,7 +93,6 @@ function NewInterview() {
             }else{
                 console.log("Error storing data");
             }
-            
 
         } catch (error) {
             console.error("Error generating questions & answers:", error);

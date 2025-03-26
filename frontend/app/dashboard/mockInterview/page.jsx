@@ -4,7 +4,7 @@ import NewInterview from '../_components/NewInterview'
 
 function mockInterview() {
   return (
-    <div className='pl-12 pt-8'>
+    <div className='px-12 py-8'>
       <h2 className='font-bold text-xl'>Mock Interview</h2>
       <h2 className='font-bold text-sm pt-1 text-[#BFBEBE]'>Create and start your AI Mock Interview here! 🚀</h2>
 

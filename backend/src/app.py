@@ -4,7 +4,8 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os
 from src.OCR import extract_text_from_pdf   # Import OCR function
-from src.LLM import generate_interview_questions    # Import LLM function
+from src.LLM import generate_interview_questions, generate_feedback    # Import LLM function
+from src.similarity import compute_cosine_similarity
 
 app = FastAPI()
 
@@ -48,3 +49,16 @@ async def generate_question(
     questions = generate_interview_questions(job_role, job_desc, ques_type, doc_text)
     
     return JSONResponse(content={"questions": questions}, status_code=200)
+
+
+class AnswerEvaluationRequest(BaseModel):
+    interview_question: str
+    suggested_answer: str
+    user_answer: str
+
+@app.post("/evaluate-answer/")
+async def evaluate_answer(request: AnswerEvaluationRequest):
+    similarity_score = compute_cosine_similarity(request.user_answer, request.suggested_answer)
+    feedback = generate_feedback(request.interview_question, request.user_answer)
+
+    return JSONResponse(content={"similarity_score": similarity_score, "feedback": feedback}, status_code=200)
