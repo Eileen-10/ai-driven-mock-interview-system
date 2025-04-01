@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os
 from src.OCR import extract_text_from_pdf   # Import OCR function
-from src.LLM import generate_interview_questions, generate_feedback    # Import LLM function
+from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback    # Import LLM function
 from src.similarity import compute_cosine_similarity
 
 app = FastAPI()
@@ -18,7 +18,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-# Define request model for question generation
+# == Interview question generation based on prompt ==
 class InterviewRequest(BaseModel):
     job_role: str
     job_desc: str
@@ -29,6 +29,7 @@ async def generate_question(
     job_role: str = Form(...), 
     job_desc: str = Form(...), 
     ques_type: str = Form(...), 
+    num_ques: str = Form(...),
     support_doc: UploadFile = File(None)
 ):
     """
@@ -46,11 +47,12 @@ async def generate_question(
         os.remove(pdf_path)  # Cleanup temp file
 
     # Generate interview questions & suggested answers
-    questions = generate_interview_questions(job_role, job_desc, ques_type, doc_text)
+    questions = generate_interview_questions(job_role, job_desc, ques_type, num_ques, doc_text)
     
     return JSONResponse(content={"questions": questions}, status_code=200)
 
 
+# == Answer Evaluation for each ques ==
 class AnswerEvaluationRequest(BaseModel):
     interview_question: str
     suggested_answer: str
@@ -62,3 +64,16 @@ async def evaluate_answer(request: AnswerEvaluationRequest):
     feedback = generate_feedback(request.interview_question, request.user_answer)
 
     return JSONResponse(content={"similarity_score": similarity_score, "feedback": feedback}, status_code=200)
+
+
+# == Overall Evaluation for each session ==
+class SessionFeedbackRequest(BaseModel):
+    job_role: str
+    job_desc: str
+    responses: list  # List containing question,user answer & feedback for each ques
+
+@app.post("/evaluate-session/")
+async def evaluate_session(request: SessionFeedbackRequest):
+    session_feedback = generate_session_feedback(request.job_role, request.job_desc, request.responses)
+
+    return JSONResponse(content={"session_feedback": session_feedback}, status_code=200)

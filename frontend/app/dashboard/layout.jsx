@@ -1,5 +1,7 @@
 import React from 'react'
 import Header from './_components/Header'
+import AppSidebar from './_components/AppSidebar'
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 
 function DashboardLayout({children}) {
   return (
@@ -9,8 +11,7 @@ function DashboardLayout({children}) {
         
         {/* Sidebar */}
         <div className="h-screen p-1 rounded-lg shadow-md">
-          {/* Add sidebar content here */}
-          Sidebar
+          <AppSidebar />
         </div>
 
         {/* Content */}

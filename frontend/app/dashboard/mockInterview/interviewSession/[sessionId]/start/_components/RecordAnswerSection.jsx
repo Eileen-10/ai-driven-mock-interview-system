@@ -190,7 +190,7 @@ function RecordAnswerSection({selectedCamera, selectedMicrophone, webcamRef, moc
             )}
           </Button>
 
-          {audioURL && (
+          {/* {audioURL && (
             <div className="mt-4">
               <h2 className="font-bold">Recorded Audio:</h2>
               <audio controls>
@@ -205,7 +205,7 @@ function RecordAnswerSection({selectedCamera, selectedMicrophone, webcamRef, moc
               <h2 className="font-bold">Transcription:</h2>
               <p className="p-2 border rounded bg-gray-100">{answerTranscript}</p>
             </div>
-          )}
+          )} */}
             
         </div>
         <div className='bg-gray-400 rounded-md flex flex-col gap-1 px-1'>

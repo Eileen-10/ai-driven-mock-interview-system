@@ -126,6 +126,7 @@ function StartInterview({params}) {
           selectedMicrophone={selectedMicrophone}
           webcamRef={webcamRef}
           interviewData={interviewData}
+          params={params}
           />
         </div>
       </div>

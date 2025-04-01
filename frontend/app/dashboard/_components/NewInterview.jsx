@@ -26,14 +26,17 @@ import { v4 as uuidv4 } from 'uuid'
 import { useUser } from '@clerk/nextjs'
 import moment from 'moment'
 import { useRouter } from 'next/navigation'
+import { supabase } from '@/utils/supabase'
 
 function NewInterview() {
     const [openPrompt, setOpenPrompt]=useState(false)
     const [jobRole, setJobRole]=useState();                 // Job Role/Position
     const [jobDesc, setJobDesc]=useState();                 // Job Description
     const [quesType, setQuesType]=useState('behavioural');  // Question Type (default: "behavioural")
+    const [numOfQues, setNumOfQues]=useState(5);            // Number of Questions
     const [supportDoc, setSupportDoc]=useState(null);       // Supporting Document
     let fileName = supportDoc ? supportDoc.name : null;     // Extract pdf file name
+    const [fileURL, setFileURL] = useState('');             // Uploaded support doc URL
     const [loading, setLoading]=useState(false);
     const [jsonResponse, setJsonResponse]=useState([]);
     const router=useRouter();
@@ -48,10 +51,15 @@ function NewInterview() {
         e.preventDefault()
         // console.log(jobRole, jobDesc, quesType, supportDoc)
 
+        const mockID = uuidv4();  
+
+        // if(supportDoc){fileUpload(mockID)};
+        
         const formData = new FormData();
         formData.append("job_role", jobRole);
         formData.append("job_desc", jobDesc);
         formData.append("ques_type", quesType);
+        formData.append("num_ques", numOfQues);
         if (supportDoc) {
             formData.append("support_doc", supportDoc);
         }
@@ -76,11 +84,12 @@ function NewInterview() {
             if(data.questions){
                 const resp=await db.insert(InterviewPrompt)
                 .values({
-                    mockID:uuidv4(),
+                    mockID:mockID,
                     jsonMockResponse:JSON.stringify(data.questions),
                     jobRole:jobRole,
                     jobDesc:jobDesc,
                     quesType:quesType,
+                    numOfQues:numOfQues,
                     supportingDoc:fileName,
                     createdBy:user?.primaryEmailAddress?.emailAddress,
                     createdAt:moment().format('DD-MM-yyyy')
@@ -100,6 +109,35 @@ function NewInterview() {
         setLoading(false);
     }
 
+    // const fileUpload = async(mockID) => {
+    //     try{
+    //         const fileExt = supportDoc.name.split(".").pop();
+    //         const filePath = `${mockID}/${fileName}`;
+
+    //         // // Get Clerk JWT Token for Supabase
+    //         // const token = await getToken({ template: "supabase" });
+
+    //         const { data, error } = await supabase.storage
+    //         .from("mock-iv-sessions")
+    //         .upload(filePath, supportDoc);
+
+    //         if(error) {
+    //             console.error("Error uploading file:", error);
+    //             return;
+    //         }
+
+    //         const { data: url } = supabase.storage
+    //         .from("mock-iv-sessions")
+    //         .getPublicUrl(filePath);
+
+    //         console.log(url.publicUrl);
+    //         setFileURL(url.publicUrl);
+    //     } catch (error) {
+    //         console.log("Error uploading file:", error.message);
+    //     }
+        
+    // }
+
   return (
     <div>
         <div className='p-2 border rounded-lg bg-[#05060B] hover:scale-105 hover:shadow-md cursor-pointer transition-all'
@@ -113,7 +151,7 @@ function NewInterview() {
                     <DialogDescription>
                         <form onSubmit={onSubmit}>
                         <div>
-                            <h2>Fields marked with <span className="text-red-500">*</span> are required.</h2>
+                            <h2 className='italic'>Fields marked with <span className="text-red-500">*</span> are required.</h2>
                             <div className='mt-5 my-3'>
                                 <label className="text-black font-bold">Job Role/Position <span className="text-red-500">*</span></label>
                                 <Input className="bg-gray-100 p-2 rounded-md" placeholder="e.g. Full Stack Developer" required
@@ -124,19 +162,27 @@ function NewInterview() {
                                 <Textarea className="bg-gray-100 p-2 rounded-md" placeholder="e.g. Frontend (React), Backend (Node.js), etc" required
                                 onChange={(event)=>setJobDesc(event.target.value)}/>
                             </div>
-                            <div className='my-3'>
-                                <label className="text-black font-bold">Question Type <span className="text-red-500">*</span></label>
-                                <Select value={quesType} onValueChange={(value) => setQuesType(value)} required>
-                                    <SelectTrigger className="w-[180px] bg-gray-100 p-2 rounded-md">
-                                        <SelectValue placeholder="Select" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="behavioural">Behavioural</SelectItem>
-                                        <SelectItem value="technical">Technical</SelectItem>
-                                        <SelectItem value="combination">Combination</SelectItem>
-                                    </SelectContent>
+                            <div className='my-3 flex justify-between'>
+                                <div className='flex-1'>
+                                    <label className="text-black font-bold">Question Type <span className="text-red-500">*</span></label>
+                                    <Select value={quesType} onValueChange={(value) => setQuesType(value)} required>
+                                        <SelectTrigger className="w-[180px] bg-gray-100 p-2 rounded-md">
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="behavioural">Behavioural</SelectItem>
+                                            <SelectItem value="technical">Technical</SelectItem>
+                                            <SelectItem value="combination">Combination</SelectItem>
+                                        </SelectContent>
                                     </Select>
+                                </div>
+                                <div className='flex-1'>
+                                    <label className="text-black font-bold">Number of Questions</label>
+                                    <Input className="bg-gray-100 p-2 rounded-md" placeholder="Default: 5"
+                                    onChange={(event)=>setNumOfQues(event.target.value)}/>
+                                </div>
                             </div>
+                            
                             <div className='my-3'>
                                 <label className="text-black font-bold">Supporting Document (Optional)</label>
                                 <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
