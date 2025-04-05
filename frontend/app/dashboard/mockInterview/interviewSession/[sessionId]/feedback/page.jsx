@@ -78,10 +78,14 @@ function Feedback({params}) {
           <h2 className='text-sm ml-2'>: {sessionData?.jobDesc}</h2>
 
           <h2 className='text-sm font-semibold'>Question Type</h2>
-          <h2 className='text-sm ml-2'>: {sessionData?.quesType}</h2>
+          <h2 className='text-sm ml-2'>: {sessionData?.quesType.charAt(0).toUpperCase() + sessionData?.quesType.slice(1)}</h2>
 
-          <h2 className='text-sm font-semibold'>Supporting Document</h2>
-          <h2 className='text-sm ml-2'>: {sessionData?.supportingDoc}</h2>
+          {sessionData?.supportingDoc && (
+            <>
+            <h2 className='text-sm font-semibold'>Supporting Document</h2>
+            <h2 className='text-sm ml-2'>: {sessionData?.supportingDoc}</h2>
+            </>
+          )}
         </div>
       </div>
       <Separator className='mt-4 mb-5' />

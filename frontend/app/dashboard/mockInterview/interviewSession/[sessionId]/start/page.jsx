@@ -6,6 +6,8 @@ import React, { useEffect, useState, useRef } from 'react'
 import QuestionSection from './_components/QuestionSection';
 import { Button } from '@/components/ui/button';
 import { Pause, Play } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import ConversationalMode from './_components/ConversationalMode';
 
 function StartInterview({params}) {
   
@@ -16,6 +18,7 @@ function StartInterview({params}) {
   const [selectedMicrophone, setSelectedMicrophone] = useState("");
   const [recordingStatus, setRecordingStatus] = useState(false);
   const webcamRef = useRef(null);
+  const {user} = useUser()
   
   useEffect(()=>{
     GetInterviewDetails();
@@ -118,18 +121,36 @@ function StartInterview({params}) {
           </Button>
         </div>
       </div>
-      <div className='flex flex-col justify-center items-center w-full h-full'>
+      
+      {/* Default Mode */}
+      {/* <div className='flex flex-col justify-center items-center w-full h-full'>
         <div className='flex flex-col bg-[#F2465E]/10 rounded-2xl border border-black my-3 px-8 py-5 justify-between h-auto'>
           <QuestionSection 
           mockInterviewQuestion={mockInterviewQuestion}
           selectedCamera={selectedCamera}
+          setSelectedCamera={setSelectedCamera}
           selectedMicrophone={selectedMicrophone}
+          setSelectedMicrophone={setSelectedMicrophone}
           webcamRef={webcamRef}
           interviewData={interviewData}
           params={params}
           />
         </div>
-      </div>
+      </div> */}
+
+      {/* Conversational Mode */}
+      <ConversationalMode 
+      mockInterviewQuestion={mockInterviewQuestion}
+      selectedCamera={selectedCamera}
+      setSelectedCamera={setSelectedCamera}
+      selectedMicrophone={selectedMicrophone}
+      setSelectedMicrophone={setSelectedMicrophone}
+      webcamRef={webcamRef}
+      interviewData={interviewData}
+      params={params}
+      />
+
+
     </div>
     
   )

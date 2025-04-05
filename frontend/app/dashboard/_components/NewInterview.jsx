@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
     Dialog,
     DialogContent,
@@ -15,11 +15,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+  } from "@/components/ui/tooltip"  
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from "@/components/ui/label"
-import { ConeIcon, LoaderCircle } from 'lucide-react'
+import { Switch } from "@/components/ui/switch"
+import { Info, LoaderCircle } from 'lucide-react'
 import { db } from '@/utils/db'
 import { InterviewPrompt } from '@/utils/schema'
 import { v4 as uuidv4 } from 'uuid'
@@ -29,18 +36,19 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/utils/supabase'
 
 function NewInterview() {
-    const [openPrompt, setOpenPrompt]=useState(false)
-    const [jobRole, setJobRole]=useState();                 // Job Role/Position
-    const [jobDesc, setJobDesc]=useState();                 // Job Description
-    const [quesType, setQuesType]=useState('behavioural');  // Question Type (default: "behavioural")
-    const [numOfQues, setNumOfQues]=useState(5);            // Number of Questions
-    const [supportDoc, setSupportDoc]=useState(null);       // Supporting Document
+    const [openPrompt, setOpenPrompt] = useState(false)
+    const [jobRole, setJobRole] = useState();                 // Job Role/Position
+    const [jobDesc, setJobDesc] = useState();                 // Job Description
+    const [quesType, setQuesType] = useState('behavioural');  // Question Type (default: "behavioural")
+    const [numOfQues, setNumOfQues] = useState(5);            // Number of Questions
+    const [supportDoc, setSupportDoc] = useState(null);       // Supporting Document
     let fileName = supportDoc ? supportDoc.name : null;     // Extract pdf file name
     const [fileURL, setFileURL] = useState('');             // Uploaded support doc URL
-    const [loading, setLoading]=useState(false);
-    const [jsonResponse, setJsonResponse]=useState([]);
-    const router=useRouter();
-    const {user}=useUser();
+    const [loading, setLoading] = useState(false);
+    const [jsonResponse, setJsonResponse] = useState([]);
+    const router = useRouter();
+    const {user} = useUser();
+    const [isConversationalMode, setIsConversationalMode] = useState(false)
 
     const handleFileChange = (event) => {
         setSupportDoc(event.target.files[0]); // Set the actual file
@@ -107,6 +115,10 @@ function NewInterview() {
             console.error("Error generating questions & answers:", error);
         }
         setLoading(false);
+    }
+
+    const handleConversationalMode = async (checked) => {
+        setIsConversationalMode(checked);
     }
 
     // const fileUpload = async(mockID) => {
@@ -182,8 +194,25 @@ function NewInterview() {
                                     onChange={(event)=>setNumOfQues(event.target.value)}/>
                                 </div>
                             </div>
-                            
-                            <div className='my-3'>
+                            <div className='flex item-center mt-5 my-3 gap-1'>
+                                <Label className="text-black font-bold">Conversational Mode <span className="text-red-500">*</span></Label>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Info className='text-gray-400 w-4 h-4 cursor-pointer' />
+                                    </TooltipTrigger>
+                                    <TooltipContent className='bg-gray-500'>
+                                        <p>Converse with a voice agent in an interactive interview setting.</p>
+                                    </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <Switch 
+                                    checked={isConversationalMode} 
+                                    onCheckedChange={handleConversationalMode}
+                                    className='ml-5'
+                                />
+                            </div>
+                            <div className='mb-3 mt-5'>
                                 <label className="text-black font-bold">Supporting Document (Optional)</label>
                                 <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
                                 <div className="grid w-full max-w-sm items-center gap-1.5">

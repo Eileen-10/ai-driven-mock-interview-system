@@ -10,7 +10,7 @@ import { InterviewPrompt, SessionFeedback, UserAnswer } from '@/utils/schema'
 import { useUser } from '@clerk/nextjs'
 import moment from 'moment'
 
-function QuestionSection({mockInterviewQuestion, selectedCamera, selectedMicrophone, webcamRef, interviewData, params}) {
+function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params}) {
     const {user} = useUser()
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
     const [sessionData, setSessionData] = useState()
@@ -131,7 +131,9 @@ function QuestionSection({mockInterviewQuestion, selectedCamera, selectedMicroph
             <div>
                 <RecordAnswerSection
                 selectedCamera={selectedCamera} 
+                setSelectedCamera={setSelectedCamera}
                 selectedMicrophone={selectedMicrophone} 
+                setSelectedMicrophone={setSelectedMicrophone}
                 webcamRef={webcamRef}
                 mockInterviewQuestion={mockInterviewQuestion}
                 activeQuestionIndex={activeQuestionIndex}

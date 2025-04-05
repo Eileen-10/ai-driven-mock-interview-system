@@ -5,26 +5,34 @@ import { db } from '@/utils/db'
 import { UserAnswer } from '@/utils/schema'
 import { useUser } from '@clerk/nextjs'
 import { AssemblyAI } from 'assemblyai'
-import { Disc, LoaderCircle, Mic, Settings, Video } from 'lucide-react'
+import { Disc, LoaderCircle, Mic, Settings, Video, VideoOff } from 'lucide-react'
 import moment from 'moment'
 import React, { useEffect, useRef, useState } from 'react'
 import Webcam from 'react-webcam'
 import RecordRTC from 'recordrtc'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const assemblyAI = new AssemblyAI({
   apiKey:process.env.NEXT_PUBLIC_ASSEMBLY_API_KEY
 })
 
-function RecordAnswerSection({selectedCamera, selectedMicrophone, webcamRef, mockInterviewQuestion, activeQuestionIndex, interviewData}) {
+function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, mockInterviewQuestion, activeQuestionIndex, interviewData}) {
+  
   const {user} = useUser()
   const [loading, setLoading] = useState(false)
   const [isRecording, setIsRecording] = useState(false)
   const [audioURL, setAudioURL] = useState(null)
   const [audioBlob, setAudioBlob] = useState(null)
   const [answerTranscript, setAnswerTranscript] = useState("")  // Transcripted user answer
+  const [availableCameras, setAvailableCameras] = useState([])
+  const [availableMicrophones, setAvailableMicrophones] = useState([])
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const recorder = useRef(null)
+  const isCameraOn = Boolean(selectedCamera);
 
   useEffect(() => {
+    fetchDevices();
     return () => {
       if (recorder.current) {
         recorder.current.destroy();
@@ -32,6 +40,19 @@ function RecordAnswerSection({selectedCamera, selectedMicrophone, webcamRef, moc
     };
   }, []);
 
+  const fetchDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter(device => device.kind === "videoinput");
+      const microphones = devices.filter(device => device.kind === "audioinput");
+
+      setAvailableCameras(cameras);
+      setAvailableMicrophones(microphones);
+    } catch (error) {
+      console.error("Error fetching devices:", error);
+    }
+  }
+  
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -157,6 +178,25 @@ function RecordAnswerSection({selectedCamera, selectedMicrophone, webcamRef, moc
       console.error("Error evaluating answer:", error);
     }
   }
+
+  const toggleCamera = () => {
+    if (isCameraOn) {
+      setSelectedCamera(""); // Turn off the camera
+    } else {
+      const savedCamera = localStorage.getItem("selectedCamera");
+      setSelectedCamera(savedCamera); // Restore last used camera
+    }
+  }
+
+  const handleOpenSettings = () => {
+    setIsSettingsOpen(true);
+  }
+
+  const handleSaveSettings = () => {
+    localStorage.setItem("selectedCamera", selectedCamera);
+    localStorage.setItem("selectedMicrophone", selectedMicrophone);
+    setIsSettingsOpen(false);
+  }
   
   return (
     <div className='flex flex-row justify-center items-center relative'>
@@ -209,9 +249,67 @@ function RecordAnswerSection({selectedCamera, selectedMicrophone, webcamRef, moc
             
         </div>
         <div className='bg-gray-400 rounded-md flex flex-col gap-1 px-1'>
-          <Button className='mt-1 bg-transparent shadow-none hover:bg-gray-300 w-5 group'><Video className='text-white group-hover:text-black' /></Button>
-          <Button className='mb-1 bg-transparent shadow-none hover:bg-gray-300 w-5 group'><Settings className='text-white group-hover:text-black' /></Button>
+          <Button onClick={toggleCamera} className='mt-1 bg-transparent shadow-none hover:bg-gray-300 w-5 group'>
+            {isCameraOn ? <VideoOff className='text-white group-hover:text-black' /> : <Video className='text-white group-hover:text-black' />}
+          </Button>
+          <Button onClick={handleOpenSettings} className='mb-1 bg-transparent shadow-none hover:bg-gray-300 w-5 group'>
+            <Settings className='text-white group-hover:text-black' />
+          </Button>
         </div>
+
+        <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Configure Devices</DialogTitle>
+              <DialogDescription className="italic text-xs">
+                Make changes to your device configuration here. Save when you're done.
+              </DialogDescription>
+            </DialogHeader>
+
+            {availableCameras.length > 0 && selectedCamera && (
+              <div className="mt-3">
+                <label className="font-bold">Camera</label>
+                <Select value={selectedCamera} onValueChange={setSelectedCamera}>
+                  <SelectTrigger className="w-full bg-gray-100">
+                    <SelectValue placeholder="Select a Camera" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCameras.map((camera) => (
+                      <SelectItem key={camera.deviceId} value={camera.deviceId}>
+                        {camera.label || "Unknown Camera"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {availableMicrophones.length > 0 && selectedMicrophone && (
+              <div className="mt-3">
+                <label className="font-bold">Microphone</label>
+                <Select value={selectedMicrophone} onValueChange={setSelectedMicrophone}>
+                  <SelectTrigger className="w-full bg-gray-100">
+                    <SelectValue placeholder="Select a Microphone" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableMicrophones.map((mic) => (
+                      <SelectItem key={mic.deviceId} value={mic.deviceId}>
+                        {mic.label || "Unknown Microphone"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <DialogFooter className="mt-5">
+              <Button onClick={handleSaveSettings}>Save</Button>
+              <Button variant="outline" onClick={() => setIsSettingsOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
     </div>
     
   )

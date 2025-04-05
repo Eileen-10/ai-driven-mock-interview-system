@@ -52,7 +52,7 @@ function InterviewItemCard({interview, removeInterview}) {
   return (
     <div className='bg-[#F2465E]/10 border border-black rounded-xl p-5 hover:shadow-lg'>
         <h2 className='font-bold'>{interview?.jobRole}</h2>
-        <h2 className='text-sm'>{interview?.quesType}</h2>
+        <h2 className='text-sm'>{interview?.quesType.charAt(0).toUpperCase() + interview?.quesType.slice(1)}</h2>
         <h2 className='text-xs italic mt-1'>{interview?.jobDesc}</h2>
         
         <div className='mt-3 flex flex-row items-center justify-between'>
