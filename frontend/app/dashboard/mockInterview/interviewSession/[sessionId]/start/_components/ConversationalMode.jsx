@@ -10,7 +10,10 @@ import Webcam from 'react-webcam';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tooltip, TooltipContent,  TooltipProvider,  TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { db } from '@/utils/db';
+import { SessionFeedback, UserAnswerConversational } from '@/utils/schema';
+import moment from 'moment';
 
 const CallStatus = {
     INACTIVE: "INACTIVE",
@@ -30,9 +33,9 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
     const [callStatus, setCallStatus] = useState(CallStatus.INACTIVE)
     const [availableCameras, setAvailableCameras] = useState([])
     const [availableMicrophones, setAvailableMicrophones] = useState([])
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-    const isCameraOn = Boolean(selectedCamera);
-    const [isCaptionOn, setIsCaptionOn] = useState(true);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false)   // Cam & Mic setting
+    const isCameraOn = Boolean(selectedCamera);                   // Toggle to on/off camera
+    const [isCaptionOn, setIsCaptionOn] = useState(true);         // Toggle to show/hide caption
 
     useEffect(() => {
       console.log("All messages:", messages);
@@ -50,6 +53,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
       };
       
       const onMessage = (message) => {
+        console.log("Vapi Message Received:", message);
         if (message.type === "transcript" && message.transcriptType === "final") {
           const newMessage = { role: message.role, content: message.transcript };
           setMessages((prev) => [...prev, newMessage]);
@@ -125,14 +129,80 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
 
     }
 
-    const handleDisconnect = () => {
+    const handleDisconnect = async() => {
         setCallStatus(CallStatus.FINISHED);
         vapi.stop();
 
-        // TODO: Generate feedback
+        // Save dialog to db
+        if(messages){
+          const resp=await db.insert(UserAnswerConversational)
+          .values({
+            mockIDRef:interviewData?.mockID,
+            dialog:JSON.stringify(messages),
+            createdBy:user?.primaryEmailAddress?.emailAddress,
+            createdAt:moment().format('DD-MM-yyyy')
+          })
+          if(resp){
+            console.log("Dialog saved successfully")
+          }
+        }
+
+        // Generate & store session feedback
+        generateSessionFeedback();
 
         router.push('/dashboard/mockInterview/interviewSession/'+interviewData?.mockID+'/feedback')
     };
+
+    const generateSessionFeedback = async() => {     
+      try {
+        const responses = messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+        }));
+
+        
+        // Call for LLM in FastAPI
+          const response = await fetch("http://127.0.0.1:8000/evaluate-session/", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  job_role: interviewData?.jobRole,
+                  job_desc: interviewData?.jobDesc,
+                  responses: responses,
+              }),
+          });
+      
+          if (!response.ok) {
+              throw new Error("Failed to generate session feedback");
+          }
+          const sessionFeedback = await response.json();
+          console.log("Session Feedback:", sessionFeedback);
+      
+          // Store in SessionFeedback db
+          if (sessionFeedback){
+              const resp=await db.insert(SessionFeedback)
+              .values({
+                mockIDRef:interviewData?.mockID,
+                overallRating:sessionFeedback?.session_feedback?.overall_rating,
+                probSolRating:sessionFeedback?.session_feedback?.rate_probSol,
+                commRating:sessionFeedback?.session_feedback?.rate_comm,
+                techRating:sessionFeedback?.session_feedback?.rate_tech,
+                confRating:sessionFeedback?.session_feedback?.rate_conf,
+                areaImprovement:sessionFeedback?.session_feedback?.area_improvement,
+                advice:sessionFeedback?.session_feedback?.advice,
+                createdBy:user?.primaryEmailAddress?.emailAddress,
+                createdAt:moment().format('DD-MM-yyyy')
+              })
+          
+              if(resp){
+                console.log("Answer & Feedback saved successfully")
+              }
+          }
+    
+      } catch (error) {
+          console.error("Error generating session feedback:", error);
+      }
+    }
 
     const toggleCamera = () => {
       if (isCameraOn) {
@@ -356,7 +426,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
           </button>
           )}
       </div>
-
+      
     </div>
   )
 }

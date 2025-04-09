@@ -55,6 +55,9 @@ export const interviewer: CreateAssistantDTO = {
   - This is a voice conversation, so keep your responses short, like in a real conversation. Don't ramble for too long.`,
         },
       ],
+    },
+    startSpeakingPlan: {
+      waitSeconds: 1.0
     }
   };
   

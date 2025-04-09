@@ -1,6 +1,6 @@
 "use client"
 import { db } from '@/utils/db'
-import { InterviewPrompt, SessionFeedback, UserAnswer } from '@/utils/schema'
+import { InterviewPrompt, SessionFeedback, UserAnswer, UserAnswerConversational } from '@/utils/schema'
 import { eq } from 'drizzle-orm'
 import React, { useEffect, useState } from 'react'
 import {
@@ -12,20 +12,27 @@ import { Calendar, ChevronDown, ChevronUp, MessageSquare, MessageSquareDiff, Mes
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
 import { Separator } from '@/components/ui/separator'
+import ReactMarkdown from 'react-markdown'
 
 function Feedback({params}) {
 
   const [sessionData, setSessionData] = useState()
   const [feedbackList, setFeedbackList] = useState([])
   const [sessionFeedbackData, setSessionFeedbackData] = useState()
+  const [dialog, setDialog] = useState([])
   const [openStates, setOpenStates] = useState({})
   const router = useRouter()
 
   useEffect(() => {
     getSessionDetails()
+    getDialog()
     getFeedback()
     getSessionFeedback()
   },[])
+
+  useEffect(() => {
+    console.log(dialog)
+  },[dialog])
 
   const getSessionDetails = async() => {
     const sessionData=await db.select()
@@ -33,6 +40,17 @@ function Feedback({params}) {
     .where(eq(InterviewPrompt.mockID,params.sessionId))
 
     setSessionData(sessionData[0])
+  }
+
+  const getDialog = async() => {
+    const dialogData=await db.select()
+    .from(UserAnswerConversational)
+    .where(eq(UserAnswerConversational.mockIDRef,params.sessionId))
+
+    if (dialogData[0]?.dialog) {
+      const parsedDialog = JSON.parse(dialogData[0].dialog); // clean parse
+      setDialog(parsedDialog);
+    }
   }
   
   const getFeedback = async() => {
@@ -61,6 +79,33 @@ function Feedback({params}) {
     }));
   };
 
+  const mergeMessagesByRole = (dialog) => {
+    const mergedMessages = [];
+    let currentMessage = null;
+  
+    dialog.forEach(msg => {
+      if (currentMessage && currentMessage.role === msg.role) {
+        // Merge content if the role is the same
+        currentMessage.content += " " + msg.content;
+      } else {
+        // Push the previous merged message if it exists
+        if (currentMessage) {
+          mergedMessages.push(currentMessage);
+        }
+        // Start a new message for the current role
+        currentMessage = { ...msg };
+      }
+    });
+  
+    // Push the last message if exists
+    if (currentMessage) {
+      mergedMessages.push(currentMessage);
+    }
+  
+    return mergedMessages;
+  };
+  const mergedDialog = mergeMessagesByRole(dialog)
+
   return (
     <div className='px-12 py-6'>
       <div className='flex flex-col'>
@@ -79,7 +124,12 @@ function Feedback({params}) {
 
           <h2 className='text-sm font-semibold'>Question Type</h2>
           <h2 className='text-sm ml-2'>: {sessionData?.quesType.charAt(0).toUpperCase() + sessionData?.quesType.slice(1)}</h2>
-
+          <h2 className='text-sm font-semibold'>Mode</h2>
+          {sessionData?.conversationalMode? (
+            <h2 className='text-sm ml-2'>: Conversational</h2>
+          ):(
+            <h2 className='text-sm ml-2'>: Default</h2>
+          )}
           {sessionData?.supportingDoc && (
             <>
             <h2 className='text-sm font-semibold'>Supporting Document</h2>
@@ -88,7 +138,53 @@ function Feedback({params}) {
           )}
         </div>
       </div>
+      
+      {/* Individual Ques & Ans Feedback/Dialog (Conversational/Default) */}
       <Separator className='mt-4 mb-5' />
+      {sessionData?.conversationalMode? (
+      <>
+      <h2 className='font-bold mx-2'>Questions</h2>
+        {sessionData?.jsonMockResponse && 
+          // Check if jsonMockResponse is a string and parse it
+          Array.isArray(sessionData.jsonMockResponse) ? sessionData.jsonMockResponse : JSON.parse(sessionData.jsonMockResponse)
+          .map((item, index) => (
+            <div className='flex flex-col bg-[#F2465E]/10 rounded-2xl border border-black my-3 px-8 py-8 justify-between h-auto' key={index}>
+              <Collapsible>
+                <CollapsibleTrigger onClick={() => toggleCollapsible(index)} className='font-bold text-left flex justify-between gap-2 w-full'>
+                  {index + 1}. {item.question}
+                  {openStates[index] ? <ChevronUp /> : <ChevronDown />}
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className='flex flex-col bg-[#40E0D0] rounded-xl border border-black mt-5 px-6 py-5 justify-between h-auto'>
+                    <h2 className='text-sm flex'><MessageSquareHeart className='w-5 h-5 mr-2'/><strong>Suggested Answer: </strong></h2>
+                    <h2 className='text-sm mt-2 mx-2'><ReactMarkdown>{item.answer}</ReactMarkdown></h2>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+        ))}
+      <Separator className='mt-4 mb-5' />
+      <h2 className='font-bold mx-2'>Dialog</h2>
+      <div className='flex flex-col bg-[#F2465E]/10 rounded-2xl border border-black my-3 p-5 justify-between h-auto'>
+        {mergedDialog.map((message, index) => (
+          <div
+            key={index}
+            className={`flex ${message.role === 'assistant' ? 'justify-start' : 'justify-end'}`}
+          >
+            <div
+              className={`flex flex-col max-w-xs p-4 m-2 rounded-xl text-sm ${message.role === 'assistant' ? 'bg-white' : 'bg-[#9C02CE] text-white'}`}
+              style={{ maxWidth: '80%' }}
+            >
+              {/* <strong>{message.role === 'assistant' ? 'Interviewer' : 'You'}:</strong> */}
+              <p>{message.content}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      </>
+      ):(
+        
+      <>
       <h2 className='font-bold mx-2'>Feedback</h2>
       {feedbackList?.length == 0?
       <h2 className='text-center text-sm italic my-6'> No interview record found.. Start attempting the questions now</h2>
@@ -106,11 +202,11 @@ function Feedback({params}) {
             </div>
             <div className='flex flex-col bg-[#40E0D0] rounded-xl border border-black my-3 px-6 py-5 justify-between h-auto'>
               <h2 className='text-sm flex'><MessageSquare className='w-5 h-5 mr-2'/><strong>Feedback: </strong></h2>
-              <h2 className='text-sm mt-2 mx-2'>{item.feedback}</h2>
+              <h2 className='text-sm mt-2 mx-2'><ReactMarkdown>{item.feedback}</ReactMarkdown></h2>
             </div>
             <div className='flex flex-col bg-[#FF8C00] rounded-xl border border-black my-3 px-6 py-5 justify-between h-auto'>
               <h2 className='text-sm flex'><MessageSquareHeart className='w-5 h-5 mr-2'/><strong>Suggested Answer: </strong></h2>
-              <h2 className='text-sm mt-2 mx-2'>{item.suggestedAns}</h2>
+              <h2 className='text-sm mt-2 mx-2'><ReactMarkdown>{item.suggestedAns}</ReactMarkdown></h2>
             </div>
             <div className='grid grid-cols-[auto_1fr] gap-y-1 w-fit mt-5 px-5'>
               <div className='flex items-center'>
@@ -129,6 +225,10 @@ function Feedback({params}) {
         </div>
       ))}
       </>}
+      </>
+      )}
+
+      {/* Overall Session Feedback */}
       <Separator className='mt-4 mb-5' />
       {sessionFeedbackData?.length > 0 && (
       <div>

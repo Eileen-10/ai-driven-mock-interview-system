@@ -29,6 +29,14 @@ export const UserAnswer = pgTable('userAnswer', {
     createdAt:varchar('createdAt')
 })
 
+export const UserAnswerConversational = pgTable('userAnswerConversational', {
+    id:serial('id').primaryKey(),
+    mockIDRef:varchar('mockID').notNull(),
+    dialog:text('dialog'),                  // Interviewer & User dialog
+    createdBy:varchar('createdBy'),
+    createdAt:varchar('createdAt')
+})
+
 export const SessionFeedback = pgTable('sessionFeedback', {
     id:serial('id').primaryKey(),
     mockIDRef:varchar('mockID').notNull(),
