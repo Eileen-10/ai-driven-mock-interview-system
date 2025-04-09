@@ -122,34 +122,35 @@ function StartInterview({params}) {
         </div>
       </div>
       
-      {/* Default Mode */}
-      {/* <div className='flex flex-col justify-center items-center w-full h-full'>
-        <div className='flex flex-col bg-[#F2465E]/10 rounded-2xl border border-black my-3 px-8 py-5 justify-between h-auto'>
-          <QuestionSection 
-          mockInterviewQuestion={mockInterviewQuestion}
-          selectedCamera={selectedCamera}
-          setSelectedCamera={setSelectedCamera}
-          selectedMicrophone={selectedMicrophone}
-          setSelectedMicrophone={setSelectedMicrophone}
-          webcamRef={webcamRef}
-          interviewData={interviewData}
-          params={params}
-          />
+      {interviewData?.conversationalMode ? (
+        // Conversational Mode
+        <ConversationalMode 
+        mockInterviewQuestion={mockInterviewQuestion}
+        selectedCamera={selectedCamera}
+        setSelectedCamera={setSelectedCamera}
+        selectedMicrophone={selectedMicrophone}
+        setSelectedMicrophone={setSelectedMicrophone}
+        webcamRef={webcamRef}
+        interviewData={interviewData}
+        params={params}
+        />
+      ) : (
+        // Default Mode
+        <div className='flex flex-col justify-center items-center w-full h-full'>
+          <div className='flex flex-col bg-[#F2465E]/10 rounded-2xl border border-black my-3 px-8 py-5 justify-between h-auto'>
+            <QuestionSection 
+            mockInterviewQuestion={mockInterviewQuestion}
+            selectedCamera={selectedCamera}
+            setSelectedCamera={setSelectedCamera}
+            selectedMicrophone={selectedMicrophone}
+            setSelectedMicrophone={setSelectedMicrophone}
+            webcamRef={webcamRef}
+            interviewData={interviewData}
+            params={params}
+            />
+          </div>
         </div>
-      </div> */}
-
-      {/* Conversational Mode */}
-      <ConversationalMode 
-      mockInterviewQuestion={mockInterviewQuestion}
-      selectedCamera={selectedCamera}
-      setSelectedCamera={setSelectedCamera}
-      selectedMicrophone={selectedMicrophone}
-      setSelectedMicrophone={setSelectedMicrophone}
-      webcamRef={webcamRef}
-      interviewData={interviewData}
-      params={params}
-      />
-
+      )}
 
     </div>
     

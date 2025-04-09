@@ -28,7 +28,7 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
   const [availableCameras, setAvailableCameras] = useState([])
   const [availableMicrophones, setAvailableMicrophones] = useState([])
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const recorder = useRef(null)
+  const recorder = useRef(null)   // User answer audio record
   const isCameraOn = Boolean(selectedCamera);
 
   useEffect(() => {

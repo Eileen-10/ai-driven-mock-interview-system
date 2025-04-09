@@ -6,7 +6,7 @@ import { Switch } from "@/components/ui/switch"
 import { db } from '@/utils/db'
 import { InterviewPrompt } from '@/utils/schema'
 import { eq } from 'drizzle-orm'
-import { Camera, CameraOffIcon, Lightbulb, Mic, Settings, SlidersHorizontalIcon, Video } from 'lucide-react'
+import { Camera, CameraOffIcon, Info, Lightbulb, Mic, Settings, SlidersHorizontalIcon, Video } from 'lucide-react'
 import Link from 'next/link'
 import React, { useEffect, useState, useRef } from 'react'
 import Webcam from 'react-webcam'
@@ -78,7 +78,9 @@ function InterviewSession({params}) {
             } else if (cameras.length > 0) {
                 setSelectedCamera(cameras[0].deviceId);
             }
-            if (validMic) {
+            if (interviewData?.conversationalMode) {
+                setSelectedMicrophone("default");
+            } else if (validMic) {
                 setSelectedMicrophone(validMic.deviceId);
             } else if (microphones.length > 0) {
                 setSelectedMicrophone(microphones[0].deviceId);
@@ -401,7 +403,11 @@ function InterviewSession({params}) {
                                             {availableMicrophones.length > 0 && selectedMicrophone && (
                                             <div className="mt-3">
                                                 <label className="font-bold">Microphone</label>
-                                                <Select value={selectedMicrophone || availableMicrophones[0]?.deviceId} onValueChange={setSelectedMicrophone}>
+                                                <Select 
+                                                value={interviewData?.conversationalMode ? "default" : selectedMicrophone}
+                                                onValueChange={setSelectedMicrophone}
+                                                disabled={interviewData?.conversationalMode}
+                                                >
                                                     <SelectTrigger className="w-full bg-gray-100">
                                                         <SelectValue placeholder="Select a Microphone" />
                                                     </SelectTrigger>
@@ -413,6 +419,13 @@ function InterviewSession({params}) {
                                                         ))}
                                                     </SelectContent>
                                                 </Select>
+                                                {interviewData?.conversationalMode && (
+                                                <div className='p-3 border rounded-lg border-black bg-[#40E0D0] text-black flex items-start mt-3'>
+                                                    <Info fill='#F9F6B1' className='size-[15px] mr-2'/>
+                                                    <h2 className='text-[10px]'>** Due to system limitation, only <strong>DEFAULT</strong> microphone device is supported for <strong>Conversational Mode.</strong><br />
+                                                    If mic configuration is necessary, you must change the system-wide default audio input through the operating system's sound settings.</h2>
+                                                </div>
+                                                )}     
                                             </div>
                                             )}
 

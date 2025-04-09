@@ -98,6 +98,7 @@ function NewInterview() {
                     jobDesc:jobDesc,
                     quesType:quesType,
                     numOfQues:numOfQues,
+                    conversationalMode:isConversationalMode,
                     supportingDoc:fileName,
                     createdBy:user?.primaryEmailAddress?.emailAddress,
                     createdAt:moment().format('DD-MM-yyyy')
