@@ -215,6 +215,7 @@ function NewInterview() {
                             </div>
                             <div className='mb-3 mt-5'>
                                 <label className="text-black font-bold">Supporting Document (Optional)</label>
+                                <div className='text-xs mt-1 italic'>e.g. Resume, CV, Cover Letter, ..</div>
                                 <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
                                 <div className="grid w-full max-w-sm items-center gap-1.5">
                                     <Input id="supportDoc" type="file" accept="application/pdf" className="bg-gray-100 p-2 rounded-md" 

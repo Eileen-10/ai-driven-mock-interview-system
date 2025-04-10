@@ -1,5 +1,5 @@
 import React from 'react'
-import Header from './_components/Header'
+import Header from '../_components/Header'
 import AppSidebar from './_components/AppSidebar'
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 
