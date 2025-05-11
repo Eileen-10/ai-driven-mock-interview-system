@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { Home, Mic, ChartColumn} from "lucide-react";
+import { Home, Mic, ChartColumn, FilePlus2} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,6 +14,7 @@ function AppSidebar() {
       <NavItem href="/dashboard/home" icon={Home} tooltip="Home" />
       <NavItem href="/dashboard/mockInterview" icon={Mic} tooltip="Mock Interview" />
       <NavItem href="/dashboard/analytics" icon={ChartColumn} tooltip="Analytic Dashboard" />
+      <NavItem href="/dashboard/supportDoc" icon={FilePlus2} tooltip="Supporting Document Center" />
     </div>
   );
 }
