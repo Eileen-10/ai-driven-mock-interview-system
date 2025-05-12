@@ -273,7 +273,20 @@ function InterviewSession({params}) {
                             <h2 className='text-base mt-3'><strong>Job Scope/Description: </strong>{interviewData?.jobDesc}</h2>
                             <h2 className='text-base mt-3'><strong>Question Type: </strong>{interviewData?.quesType.charAt(0).toUpperCase() + interviewData?.quesType.slice(1)}</h2>
                             {interviewData?.supportingDoc && (
-                                <h2 className='text-base mt-3'><strong>Supporting Document: </strong>{interviewData.supportingDoc}</h2>
+                                <h2 className='text-base mt-3'><strong>Supporting Document: </strong>
+                                {interviewData.supportingDocURL ? (
+                                    <a
+                                        href={interviewData.supportingDocURL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 underline hover:text-blue-800 italic"
+                                    >
+                                        {interviewData.supportingDoc}
+                                    </a>
+                                ) : (
+                                    interviewData.supportingDoc
+                                )}
+                                </h2>
                             )}
                         </div>
                         <div className='p-5 border rounded-lg border-black bg-[#40E0D0] text-black flex items-start gap-3'>

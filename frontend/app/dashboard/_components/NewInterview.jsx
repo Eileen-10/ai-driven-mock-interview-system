@@ -1,5 +1,6 @@
 "use client"
 import React, { useEffect, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 import {
     Dialog,
     DialogContent,
@@ -33,7 +34,11 @@ import { v4 as uuidv4 } from 'uuid'
 import { useUser } from '@clerk/nextjs'
 import moment from 'moment'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/utils/supabase'
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY
+)
 
 function NewInterview() {
     const [openPrompt, setOpenPrompt] = useState(false)
@@ -48,7 +53,11 @@ function NewInterview() {
     const [jsonResponse, setJsonResponse] = useState([]);
     const router = useRouter();
     const {user} = useUser();
-    const [isConversationalMode, setIsConversationalMode] = useState(false)
+    const [isConversationalMode, setIsConversationalMode] = useState(false) // IV mode
+    const [docMode, setDocMode] = useState(null); // supportDoc: Select existing/ Upload new/ None
+    const [fileList, setFileList] = useState([]); // Uploaded supportDocs list from supabase
+    const [selectedDocId, setSelectedDocId] = useState(null); // Selected doc from uploaded doc list
+    const [saveToSupportDocsCenter, setSaveToSupportDocsCenter] = useState(false); // Option to save to supabase if upload new doc
 
     const handleFileChange = (event) => {
         setSupportDoc(event.target.files[0]); // Set the actual file
@@ -57,24 +66,52 @@ function NewInterview() {
     const onSubmit=async(e)=>{
         setLoading(true)
         e.preventDefault()
-        // console.log(jobRole, jobDesc, quesType, supportDoc)
 
         const mockID = uuidv4();  
-
-        // if(supportDoc){fileUpload(mockID)};
         
         const formData = new FormData();
         formData.append("job_role", jobRole);
         formData.append("job_desc", jobDesc);
         formData.append("ques_type", quesType);
         formData.append("num_ques", numOfQues);
-        if (supportDoc) {
-            formData.append("support_doc", supportDoc);
-        }
-
-        // Call for OCR & LLM from FastAPI
-        // To generate Interview Questions & Suggested Answers
         try {
+            let file = null;
+            let fileUrl = null;
+            
+            // If user selected existing document from dropdown
+            if (docMode === 'existing' && selectedDocId) {
+                const selectedFile = fileList.find(file => file.id === selectedDocId);
+                if (selectedFile) {
+                    const response = await fetch(selectedFile.url);
+                    const blob = await response.blob();
+                    file = new File([blob], selectedFile.name, { type: 'application/pdf' });
+                    setSupportDoc(file); // update local state if needed
+                    formData.append("support_doc", file);
+                    fileUrl = selectedFile.url;
+                }
+            }
+
+            // If user uploaded a new file
+            let uploadedUrl = null;
+            if (docMode === 'upload' && supportDoc) {
+                formData.append("support_doc", supportDoc);
+
+                // Upload to Supabase if requested
+                if (saveToSupportDocsCenter) {
+                    uploadedUrl = await fileUpload(mockID)
+                    if (!uploadedUrl) {
+                        setLoading(false); // Prevent session start if upload failed
+                        return;
+                    }
+                    setFileURL(uploadedUrl);
+                    fileUrl = uploadedUrl;
+                }
+            }
+
+            console.log(jobRole, jobDesc, quesType, supportDoc)
+
+            // Call for OCR & LLM from FastAPI
+            // To generate Interview Questions & Suggested Answers
             const response = await fetch("http://127.0.0.1:8000/generate-question", {
                 method: "POST",
                 body: formData,
@@ -88,6 +125,13 @@ function NewInterview() {
             console.log("Generated Questions & Suggested Answers:", data.questions);
             setJsonResponse(data.questions);
 
+            let supportingDocName = null;
+            if (docMode === 'existing' && selectedDocId) {
+                supportingDocName = file?.name; // file is defined in your fetch block
+            } else if (docMode === 'upload' && supportDoc) {
+                supportingDocName = supportDoc.name;
+            }
+
             // Store in database
             if(data.questions){
                 const resp=await db.insert(InterviewPrompt)
@@ -99,7 +143,8 @@ function NewInterview() {
                     quesType:quesType,
                     numOfQues:numOfQues,
                     conversationalMode:isConversationalMode,
-                    supportingDoc:fileName,
+                    supportingDoc:supportingDocName,
+                    supportingDocURL:fileUrl,
                     createdBy:user?.primaryEmailAddress?.emailAddress,
                     createdAt:moment().format('DD-MM-yyyy')
                 }).returning({mockID:InterviewPrompt.mockID})
@@ -122,34 +167,126 @@ function NewInterview() {
         setIsConversationalMode(checked);
     }
 
-    // const fileUpload = async(mockID) => {
-    //     try{
-    //         const fileExt = supportDoc.name.split(".").pop();
-    //         const filePath = `${mockID}/${fileName}`;
+    useEffect(() => {
+        const fetchUserFiles = async () => {
+            if (!user) return;
 
-    //         // // Get Clerk JWT Token for Supabase
-    //         // const token = await getToken({ template: "supabase" });
+            const { data, error } = await supabase
+            .from('supportDocs')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
 
-    //         const { data, error } = await supabase.storage
-    //         .from("mock-iv-sessions")
-    //         .upload(filePath, supportDoc);
+            if (error) {
+            console.error('Error fetching metadata:', error);
+            return;
+            }
 
-    //         if(error) {
-    //             console.error("Error uploading file:", error);
-    //             return;
-    //         }
+            const filesWithUrls = data.map(file => ({
+            id: file.id.toString(),
+            name: file.file_name,
+            url: file.public_url,
+            updatedAt: new Date(file.created_at).toLocaleString(),
+            isDefault: file.is_default
+            }));
 
-    //         const { data: url } = supabase.storage
-    //         .from("mock-iv-sessions")
-    //         .getPublicUrl(filePath);
+            setFileList(filesWithUrls);
+            const defaultDoc = filesWithUrls.find(f => f.isDefault);
+            if (defaultDoc) {
+            setSelectedDocId(defaultDoc.id);
+            }
+        };
 
-    //         console.log(url.publicUrl);
-    //         setFileURL(url.publicUrl);
-    //     } catch (error) {
-    //         console.log("Error uploading file:", error.message);
-    //     }
-        
-    // }
+        if (docMode === 'existing') {
+            fetchUserFiles();
+        }
+    }, [docMode, user]);
+
+    useEffect(() => {
+        if (docMode === null) {
+            setSupportDoc(null);
+            setSelectedDocId(null);
+        }
+    }, [docMode]);
+
+    const fileUpload = async (mockID) => {
+        try {
+            if (!supportDoc || !user) return null;
+
+            const originalFileName = supportDoc.name;
+            const fileExt = supportDoc.name.split('.').pop();
+
+            // 1. Check for existing file with same name
+            const { data: existingFiles, error: checkError } = await supabase
+            .from('supportDocs')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('file_name', originalFileName);
+
+            if (checkError) {
+            console.error("Error checking for existing file:", checkError);
+            return null;
+            }
+
+            if (existingFiles.length > 0) {
+            alert("You have already uploaded a file with the same name. Please rename the file or choose another if you want to save it into existing list.");
+            return null;
+            }
+
+            // 2. Check if user already has a default file
+            const { data: defaultCheck } = await supabase
+            .from("supportDocs")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("is_default", true);
+
+            const isDefault = defaultCheck.length === 0;
+
+            // 3. Create unique file name and path
+            const uniqueSuffix = Date.now();
+            const uniqueFileName = `${uniqueSuffix}.${fileExt}`;
+            const filePath = `support_docs/${user.id}/${uniqueFileName}`;
+
+            const { error: uploadError } = await supabase.storage
+            .from("mock-iv-sessions")
+            .upload(filePath, supportDoc, {
+                cacheControl: "3600",
+                upsert: false,
+            });
+
+            if (uploadError) {
+            console.error("Upload error:", uploadError);
+            return null;
+            }
+
+            const { data: { publicUrl } } = supabase
+            .storage
+            .from("mock-iv-sessions")
+            .getPublicUrl(filePath);
+
+            // 4. Insert metadata into supportDocs table
+            const { error: dbError } = await supabase
+            .from("supportDocs")
+            .insert([{
+                user_id: user.id,
+                file_name: originalFileName,
+                file_path: filePath,
+                public_url: publicUrl,
+                is_default: isDefault,
+            }]);
+
+            if (dbError) {
+            console.error("Error inserting into supportDocs:", dbError);
+            return null;
+            }
+
+            return publicUrl;
+
+        } catch (error) {
+            console.error("Error in fileUpload:", error.message);
+            return null;
+        }
+    }
 
   return (
     <div>
@@ -217,10 +354,55 @@ function NewInterview() {
                                 <label className="text-black font-bold">Supporting Document (Optional)</label>
                                 <div className='text-xs mt-1 italic'>e.g. Resume, CV, Cover Letter, ..</div>
                                 <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
-                                <div className="grid w-full max-w-sm items-center gap-1.5">
-                                    <Input id="supportDoc" type="file" accept="application/pdf" className="bg-gray-100 p-2 rounded-md" 
-                                    onChange={handleFileChange}/>
+                                <div className='flex gap-3 mt-2'>
+                                    <Button
+                                        type="button"
+                                        onClick={() => setDocMode(prev => prev === 'existing' ? null : 'existing')}
+                                        className={`border ${docMode === 'existing' ? 'bg-black text-white hover:bg-black' : 'bg-white text-black hover:bg-gray-600 hover:text-white'}`}
+                                    >
+                                        Select from existing document
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        onClick={() => setDocMode(prev => prev === 'upload' ? null : 'upload')}
+                                        className={`border ${docMode === 'upload' ? 'bg-black text-white hover:bg-black' : 'bg-white text-black hover:bg-gray-600 hover:text-white'}`}
+                                    >
+                                        Upload new document
+                                    </Button>
                                 </div>
+                                {docMode === 'existing' && (
+                                    <div className="my-2">
+                                    {fileList.length > 0 ? (
+                                        <Select
+                                        value={selectedDocId || ''}
+                                        onValueChange={(val) => setSelectedDocId(val)}
+                                        >
+                                        <SelectTrigger className="w-full bg-gray-100 p-2 rounded-md">
+                                            <SelectValue placeholder="Choose a document" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {fileList.map((file) => (
+                                            <SelectItem key={file.id} value={file.id}>
+                                                {file.name} {file.isDefault ? '(Default)' : ''}
+                                            </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                        </Select>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 italic mt-2">No documents found.</p>
+                                    )}
+                                    </div>
+                                )}
+                                {docMode === 'upload' && (
+                                    <div className="grid w-full max-w-sm items-center gap-1.5 my-2">
+                                        <Input id="supportDoc" type="file" accept="application/pdf" className="bg-gray-100 p-2 rounded-md" 
+                                        onChange={handleFileChange}/>
+                                        <div className="flex items-center gap-2 mt-2">
+                                            <Switch id="saveToCenter" checked={saveToSupportDocsCenter} onCheckedChange={setSaveToSupportDocsCenter} />
+                                            <Label htmlFor="saveToCenter" className="text-sm">Save to existing document list</Label>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className='flex gap-5 justify-center'>

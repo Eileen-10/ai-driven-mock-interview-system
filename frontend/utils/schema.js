@@ -11,6 +11,7 @@ export const InterviewPrompt = pgTable('interviewPrompt', {
     numOfQues:integer('numOfQues').notNull(),                   // Num of Ques
     conversationalMode:boolean('conversationalMode').notNull(), // Default/Conversational Mode
     supportingDoc:text('supportingDoc'),                        // **Supporting Documents
+    supportingDocURL:text('supportingDocURL'),
     createdBy:varchar('createdBy').notNull(),
     createdAt:varchar('createdAt'),
     mockID:varchar('mockID').notNull()

@@ -133,7 +133,20 @@ function Feedback({params}) {
           {sessionData?.supportingDoc && (
             <>
             <h2 className='text-sm font-semibold'>Supporting Document</h2>
-            <h2 className='text-sm ml-2'>: {sessionData?.supportingDoc}</h2>
+            <h2 className='text-sm ml-2'>
+              : {sessionData.supportingDocURL ? (
+                <a
+                  href={sessionData.supportingDocURL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 underline hover:text-blue-800 italic"
+                >
+                  {sessionData.supportingDoc}
+                </a>
+              ) : (
+                sessionData.supportingDoc
+              )}
+            </h2>
             </>
           )}
         </div>
