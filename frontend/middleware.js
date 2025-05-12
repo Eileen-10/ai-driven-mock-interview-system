@@ -1,9 +1,10 @@
+'use client'
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Define route for protection
 const isProtectedRoute = createRouteMatcher([
     '/dashboard(.*)', 
-    '/forum(.*)'
+    '/questionbank(.*)'
 ])
 
 export default clerkMiddleware(async (auth, req) => {
