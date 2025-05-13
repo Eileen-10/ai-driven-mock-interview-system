@@ -1,6 +1,8 @@
 import { boolean, integer, numeric, pgEnum, pgTable, serial, text, varchar } from "drizzle-orm/pg-core";
 
 export const quesTypeEnum = pgEnum('quesType', ['behavioural', 'technical', 'combination']);
+export const QBquesTypeEnum = pgEnum('QBquesType', ['behavioral', 'technical']);
+export const QBquesCategoryEnum = pgEnum('QBquesCategory', ['general', 'healthcare', 'engineering & IT', 'business & finance', 'public safety', 'customer service','education & literacy', 'social services']);
 
 export const InterviewPrompt = pgTable('interviewPrompt', {
     id:serial('id').primaryKey(),
@@ -48,6 +50,15 @@ export const SessionFeedback = pgTable('sessionFeedback', {
     confRating:integer('confRating'),           // Confidence & Clarity rating
     areaImprovement:text('areaImprovement'),    // Area for Improvement
     advice:text('advice'),                      // Actionable advice
+    createdBy:varchar('createdBy'),
+    createdAt:varchar('createdAt')
+})
+
+export const QuestionBank = pgTable('questionBank', {
+    id:serial('id').primaryKey(),
+    question:varchar('question').notNull(),     // Question
+    quesType:QBquesTypeEnum(),                  // Question Type
+    category:QBquesCategoryEnum(),              // Category
     createdBy:varchar('createdBy'),
     createdAt:varchar('createdAt')
 })
