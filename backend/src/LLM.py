@@ -40,6 +40,26 @@ def generate_interview_questions(job_role, job_desc, ques_type, num_ques, doc_te
     })
 
 
+# == Suggested Answer for Custom Session Generation ==
+def generate_interview_answers(question, job_role="", job_desc=""):
+    prompt_template = PromptTemplate.from_template("""
+    Interview Question: {question}
+    Job Role/Position: {job_role}
+    Job Description: {job_desc}
+
+    Generate a high-quality suggested answer to the interview question above.
+    Return only JSON: {{ "question": "...", "answer": "..." }}
+    """)
+
+    chain = prompt_template | llm | RunnableLambda(lambda x: json.loads(x.content.replace("```json", "").replace("```", "").strip()))
+
+    return chain.invoke({
+        "question": question,
+        "job_role": job_role,
+        "job_desc": job_desc
+    })
+
+
 # == Evaluate user answer and generate feedback ==
 def generate_feedback(interview_question, user_answer):
     prompt_template = PromptTemplate.from_template("""

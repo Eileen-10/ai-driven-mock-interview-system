@@ -145,6 +145,7 @@ function NewInterview() {
                     conversationalMode:isConversationalMode,
                     supportingDoc:supportingDocName,
                     supportingDocURL:fileUrl,
+                    isCustom:false,
                     createdBy:user?.primaryEmailAddress?.emailAddress,
                     createdAt:moment().format('DD-MM-yyyy')
                 }).returning({mockID:InterviewPrompt.mockID})
@@ -332,15 +333,15 @@ function NewInterview() {
                                     onChange={(event)=>setNumOfQues(event.target.value)}/>
                                 </div>
                             </div>
-                            <div className='flex item-center mt-5 my-3 gap-1'>
-                                <Label className="text-black font-bold">Conversational Mode <span className="text-red-500">*</span></Label>
+                            <div className='flex items-center mt-5 my-3 gap-1'>
+                                <Label className="text-black font-bold">Interview Mode <span className="text-red-500">*</span></Label>
                                 <TooltipProvider>
                                     <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Info className='text-gray-400 w-4 h-4 cursor-pointer' />
                                     </TooltipTrigger>
                                     <TooltipContent className='bg-gray-500'>
-                                        <p>Converse with a voice agent in an interactive interview setting.</p>
+                                        <p>Converse with a voice agent in an interactive interview setting with Conversational Mode.</p>
                                     </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
@@ -349,6 +350,7 @@ function NewInterview() {
                                     onCheckedChange={handleConversationalMode}
                                     className='ml-5'
                                 />
+                                <Label className="text-black ml-3">{isConversationalMode ? "Conversational Mode" : "Default Mode"}</Label>
                             </div>
                             <div className='mb-3 mt-5'>
                                 <label className="text-black font-bold">Supporting Document (Optional)</label>

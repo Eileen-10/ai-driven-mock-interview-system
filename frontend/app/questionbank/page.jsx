@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react'
 import { db } from '@/utils/db';
 import { useUser } from '@clerk/nextjs'
-import { QuestionBank } from '@/utils/schema';
+import { InterviewPrompt, QuestionBank } from '@/utils/schema';
 import QuestionItemCard from '../dashboard/_components/QuestionItemCard';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -13,21 +13,39 @@ import { Info, LoaderCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import moment from 'moment'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { v4 as uuidv4 } from 'uuid'
+import { useRouter } from 'next/navigation';
 
 function QuestionBankPage() {
   const {user} = useUser()
+  const router = useRouter()
   const [questionList, setQuestionList] = useState([])
+  
+  //Filter
   const [searchTerm, setSearchTerm] = useState('')  // search text input
   const [quesTypeFilter, setQuesTypeFilter] = useState('allType') // ques type dropdown filter
   const [categoryFilter, setCategoryFilter] = useState('allCategory') // ques category dropdown filter
   const [currentPage, setCurrentPage] = useState(1)
   const questionsPerPage = 5
+  
+  // Post New Ques
   const [openPrompt, setOpenPrompt] = useState(false) // New question input prompt
   const [loading, setLoading] = useState(false)
   const [newQues, setNewQues] = useState();   // new IV ques
   const [newQuesType, setNewQuesType] = useState('notsure');  // new ques type
   const [newQuesCategory, setNewQuesCategory] = useState('notsure');  // new ques category
   const [newJobRole, setNewJobRole] = useState('');  // new ques job role
+  
+  // New custom session
+  const [selectedQuestions, setSelectedQuestions] = useState([]); // selected ques for custom session
+  const [openSessionPrompt, setOpenSessionPrompt] = useState(false) // New custom session prompt
+  const [jobRole, setJobRole] = useState("");  // Job Role/Position
+  const [jobDesc, setJobDesc] = useState("");  // Job Description
+  const [isConversationalMode, setIsConversationalMode] = useState(false) // IV mode
+  const [sessionLoading, setSessionLoading] = useState(false)
+  const [jsonResponse, setJsonResponse] = useState([]); // Selected ques & suggested ans pair
 
   useEffect(() => {
     user && getQuestionList()
@@ -128,10 +146,82 @@ function QuestionBankPage() {
     setLoading(false);
   }
 
+  const handleConversationalMode = async (checked) => {
+    setIsConversationalMode(checked);
+  }
+  
+  const onSessionSubmit = async (e) => {
+    e.preventDefault();
+    setSessionLoading(true);
+
+    const mockID = uuidv4(); 
+
+    console.log(selectedQuestions)
+    try {
+      // Generate suggested answer for each ques
+      const response = await fetch("http://localhost:8000/generate-suggested-answers/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          questions: selectedQuestions,
+          job_role: jobRole,
+          job_desc: jobDesc,
+        }),
+      });
+      const data = await response.json();
+      setJsonResponse(data.suggested); // Ques & Ans pair
+      // console.log("Selected Questions & Suggested Answers:", data.suggested);
+      // console.log("Conversational Mode:", isConversationalMode);
+      // console.log("Job Role:", jobRole.trim() || null);
+      // console.log("Job Description:", jobDesc.trim() || null);
+      // console.log("Number of Question:", selectedQuestions.length);
+      
+      // Save to InterviewPrompt db
+      if(data.suggested){
+          const resp=await db.insert(InterviewPrompt)
+          .values({
+              mockID:mockID,
+              jsonMockResponse:JSON.stringify(data.suggested),
+              jobRole:jobRole.trim() || null,
+              jobDesc:jobDesc.trim() || null,
+              numOfQues:selectedQuestions.length,
+              conversationalMode:isConversationalMode,
+              isCustom:true,
+              createdBy:user?.primaryEmailAddress?.emailAddress,
+              createdAt:moment().format('DD-MM-yyyy')
+          }).returning({mockID:InterviewPrompt.mockID})
+          console.log("Inserted ID:", resp)
+          if(resp){
+              setSelectedQuestions([]);
+              setJobRole();
+              setJobDesc();
+              setOpenSessionPrompt(false);   // Close the prompt dialog
+              router.push('/dashboard/mockInterview/interviewSession/'+resp[0]?.mockID)
+          }
+      }else{
+          console.log("Error storing data");
+      }
+
+      // Clean variables
+      // setSelectedQuestions([]);
+      // setJobRole();
+      // setJobDesc();
+      // setOpenSessionPrompt(false);
+
+    } catch (error) {
+      console.error("Failed to save session:", error);
+    } finally {
+      setSessionLoading(false);
+    }
+  };
+
   return (
     <div className='px-12 py-8'>
       <h2 className='font-bold text-xl'>Question Bank</h2>
       <h2 className='text-sm italic pt-1 text-gray-500'>Search, filter, and explore questions to prepare for every interview scenario. 🔍</h2>
+      {/* == Filter == */}
       <div className='flex flex-col md:flex-row gap-4 my-5'>
         <Input
           placeholder='Search questions...'
@@ -166,14 +256,29 @@ function QuestionBankPage() {
           </SelectContent>
         </Select>
         <Button onClick={()=>setOpenPrompt(true)}>+ New Question</Button>
+        {selectedQuestions.length !== 0 && (<Button 
+        className='bg-[#9C02CE] hover:bg-[#9C02CE]/80'
+        onClick={()=>setOpenSessionPrompt(true)}>
+          Generate Custom Session</Button>)}
       </div>
+      {/* == Question Listing == */}
       <div className='grid grid-cols-1 gap-5'>
         {currentPageQuestions && currentPageQuestions.map((question, index) =>(
             <QuestionItemCard 
             question={question}
-            key={index}/>
+            key={index}
+            isSelected={selectedQuestions.includes(question.question)}
+            onSelect={(checked) => {
+              if (checked) {
+                setSelectedQuestions([...selectedQuestions, question.question]);
+              } else {
+                setSelectedQuestions(selectedQuestions.filter(q => q !== question.question));
+              }
+            }}
+            />
         ))}
       </div>
+      {/* == Pagination == */}
       {filteredQuestions.length > questionsPerPage && (
         <Pagination className='mt-6'>
           <PaginationContent>
@@ -238,6 +343,7 @@ function QuestionBankPage() {
           </PaginationContent>
         </Pagination>
       )}
+      {/* == Post New Ques Prompt == */}
       <Dialog open={openPrompt}>
           <DialogContent className="max-w-xl [&>button]:hidden">
               <DialogHeader>
@@ -320,6 +426,115 @@ function QuestionBankPage() {
                               <>
                               <LoaderCircle className='animate-spin'/>Saving questions..
                               </>:'Post'
+                              }
+                          </Button>
+                      </div>
+                      </form>
+                  </DialogDescription>
+              </DialogHeader>
+          </DialogContent>
+      </Dialog>
+      {/* == Generate Custom Session Prompt == */}
+      <Dialog open={openSessionPrompt}>
+          <DialogContent className="max-w-xl [&>button]:hidden">
+              <DialogHeader>
+                  <DialogTitle className='text-xl'>Additional details for this interview session</DialogTitle>
+                  <DialogDescription>
+                      <form onSubmit={onSessionSubmit}>
+                      <div>
+                          <h2 className='italic'>Fields marked with <span className="text-red-500">*</span> are required.</h2>
+                          <div className='flex items-center mt-5 my-3 gap-1'>
+                              <Label className="text-black font-bold">Interview Mode <span className="text-red-500">*</span></Label>
+                              <TooltipProvider>
+                                  <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Info className='text-gray-400 w-4 h-4 cursor-pointer' />
+                                  </TooltipTrigger>
+                                  <TooltipContent className='bg-gray-500'>
+                                      <p>Converse with a voice agent in an interactive interview setting with Conversational Mode.</p>
+                                  </TooltipContent>
+                                  </Tooltip>
+                              </TooltipProvider>
+                              <Switch 
+                                  checked={isConversationalMode} 
+                                  onCheckedChange={handleConversationalMode}
+                                  className='ml-5'
+                              />
+                              <Label className="text-black ml-3">{isConversationalMode ? "Conversational Mode" : "Default Mode"}</Label>
+                          </div>
+                          <div className='mt-5 my-3'>
+                              <label className="text-black font-bold">Job Role/Position </label>
+                              <Input className="bg-gray-100 p-2 rounded-md" placeholder="e.g. Full Stack Developer"
+                              onChange={(event)=>setJobRole(event.target.value)}/>
+                          </div>
+                          <div className='my-3'>
+                              <label className="text-black font-bold">Job Scope/Description </label>
+                              <Textarea className="bg-gray-100 p-2 rounded-md" placeholder="e.g. Frontend (React), Backend (Node.js), etc"
+                              onChange={(event)=>setJobDesc(event.target.value)}/>
+                          </div>
+                          {/* Supporting Document */}
+                          {/* <div className='mb-3 mt-5'>
+                              <label className="text-black font-bold">Supporting Document (Optional)</label>
+                              <div className='text-xs mt-1 italic'>e.g. Resume, CV, Cover Letter, ..</div>
+                              <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
+                              <div className='flex gap-3 mt-2'>
+                                  <Button
+                                      type="button"
+                                      onClick={() => setDocMode(prev => prev === 'existing' ? null : 'existing')}
+                                      className={`border ${docMode === 'existing' ? 'bg-black text-white hover:bg-black' : 'bg-white text-black hover:bg-gray-600 hover:text-white'}`}
+                                  >
+                                      Select from existing document
+                                  </Button>
+                                  <Button
+                                      type="button"
+                                      onClick={() => setDocMode(prev => prev === 'upload' ? null : 'upload')}
+                                      className={`border ${docMode === 'upload' ? 'bg-black text-white hover:bg-black' : 'bg-white text-black hover:bg-gray-600 hover:text-white'}`}
+                                  >
+                                      Upload new document
+                                  </Button>
+                              </div>
+                              {docMode === 'existing' && (
+                                  <div className="my-2">
+                                  {fileList.length > 0 ? (
+                                      <Select
+                                      value={selectedDocId || ''}
+                                      onValueChange={(val) => setSelectedDocId(val)}
+                                      >
+                                      <SelectTrigger className="w-full bg-gray-100 p-2 rounded-md">
+                                          <SelectValue placeholder="Choose a document" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {fileList.map((file) => (
+                                          <SelectItem key={file.id} value={file.id}>
+                                              {file.name} {file.isDefault ? '(Default)' : ''}
+                                          </SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                      </Select>
+                                  ) : (
+                                      <p className="text-sm text-gray-500 italic mt-2">No documents found.</p>
+                                  )}
+                                  </div>
+                              )}
+                              {docMode === 'upload' && (
+                                  <div className="grid w-full max-w-sm items-center gap-1.5 my-2">
+                                      <Input id="supportDoc" type="file" accept="application/pdf" className="bg-gray-100 p-2 rounded-md" 
+                                      onChange={handleFileChange}/>
+                                      <div className="flex items-center gap-2 mt-2">
+                                          <Switch id="saveToCenter" checked={saveToSupportDocsCenter} onCheckedChange={setSaveToSupportDocsCenter} />
+                                          <Label htmlFor="saveToCenter" className="text-sm">Save to existing document list</Label>
+                                      </div>
+                                  </div>
+                              )}
+                          </div> */}
+                      </div>
+                      <div className='flex gap-5 justify-center'>
+                          <Button type="button" variant="outline" onClick={()=>setOpenSessionPrompt(false)}>Cancel</Button>
+                          <Button type="submit" disabled={sessionLoading}>
+                              {sessionLoading?
+                              <>
+                              <LoaderCircle className='animate-spin'/>Starting session..
+                              </>:'Launch'
                               }
                           </Button>
                       </div>

@@ -5,7 +5,7 @@ from pydantic import BaseModel
 import os
 import src.model.download_models
 from src.OCR import extract_text_from_pdf   # Import OCR function
-from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback    # Import LLM function
+from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback, generate_interview_answers # Import LLM function
 from src.similarity import compute_cosine_similarity
 from src.classification import predict_question_type, predict_question_category
 
@@ -53,6 +53,26 @@ async def generate_question(
     
     return JSONResponse(content={"questions": questions}, status_code=200)
 
+
+# == Suggested asnwer for custom session questions ==
+class AnswerGenerationRequest(BaseModel):
+    questions: list[str]
+    job_role: str = ""
+    job_desc: str = ""
+
+@app.post("/generate-suggested-answers/")
+async def generate_suggested_answers(request: AnswerGenerationRequest):
+    results = []
+
+    for q in request.questions:
+        generated = generate_interview_answers(
+            question=q,
+            job_role=request.job_role,
+            job_desc=request.job_desc,
+        )
+        results.append(generated)
+
+    return JSONResponse(content={"suggested": results}, status_code=200)
 
 # == Answer Evaluation for each ques ==
 class AnswerEvaluationRequest(BaseModel):
