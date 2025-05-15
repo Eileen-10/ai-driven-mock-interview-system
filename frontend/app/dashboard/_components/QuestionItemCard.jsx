@@ -10,8 +10,13 @@ function QuestionItemCard({question}) {
             {question?.quesType.charAt(0).toUpperCase() + question?.quesType.slice(1)}
             </Badge>
             <Badge variant="outline" className="bg-[#FF8C00] text-white">
-            {question?.category.charAt(0).toUpperCase() + question?.category.slice(1)}
+            {question?.category.replace(/\b\w/g, (char) => char.toUpperCase())}
             </Badge>
+            {question?.jobRole && (
+                <Badge variant="outline" className="bg-[#40E0D0] text-white">
+                {question?.jobRole.replace(/\b\w/g, (char) => char.toUpperCase())}
+                </Badge>
+            )}
         </div>
         
         {/* <div className='mt-3 flex flex-row items-center justify-between'>

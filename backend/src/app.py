@@ -3,9 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os
+import src.model.download_models
 from src.OCR import extract_text_from_pdf   # Import OCR function
 from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback    # Import LLM function
 from src.similarity import compute_cosine_similarity
+from src.classification import predict_question_type, predict_question_category
 
 app = FastAPI()
 
@@ -77,3 +79,18 @@ async def evaluate_session(request: SessionFeedbackRequest):
     session_feedback = generate_session_feedback(request.job_role, request.job_desc, request.responses)
 
     return JSONResponse(content={"session_feedback": session_feedback}, status_code=200)
+
+
+# == Classification for new ques type ==
+class QuestionInput(BaseModel):
+    question: str
+
+@app.post("/predict-question-type/")
+def classify_type(data: QuestionInput):
+    label = predict_question_type(data.question)
+    return {"predicted_type": label}
+
+@app.post("/predict-question-category/")
+async def predict_category(payload: QuestionInput):
+    category = predict_question_category(payload.question)
+    return {"predicted_category": category}

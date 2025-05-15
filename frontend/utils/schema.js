@@ -2,7 +2,7 @@ import { boolean, integer, numeric, pgEnum, pgTable, serial, text, varchar } fro
 
 export const quesTypeEnum = pgEnum('quesType', ['behavioural', 'technical', 'combination']);
 export const QBquesTypeEnum = pgEnum('QBquesType', ['behavioral', 'technical']);
-export const QBquesCategoryEnum = pgEnum('QBquesCategory', ['general', 'healthcare', 'engineering & IT', 'business & finance', 'public safety', 'customer service','education & literacy', 'social services']);
+export const QBquesCategoryEnum = pgEnum('QBquesCategory', ['general', 'healthcare', 'engineering & it', 'business & finance', 'public safety', 'customer service','education & literacy', 'social services']);
 
 export const InterviewPrompt = pgTable('interviewPrompt', {
     id:serial('id').primaryKey(),
@@ -59,6 +59,7 @@ export const QuestionBank = pgTable('questionBank', {
     question:varchar('question').notNull(),     // Question
     quesType:QBquesTypeEnum(),                  // Question Type
     category:QBquesCategoryEnum(),              // Category
+    jobRole:varchar('jobRole'),                 // Job role/position name
     createdBy:varchar('createdBy'),
     createdAt:varchar('createdAt')
 })

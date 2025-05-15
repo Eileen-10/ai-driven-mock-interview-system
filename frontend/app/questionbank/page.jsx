@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { LoaderCircle } from 'lucide-react';
+import { Info, LoaderCircle } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
+import moment from 'moment'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 function QuestionBankPage() {
   const {user} = useUser()
@@ -57,7 +59,73 @@ function QuestionBankPage() {
   }, [searchTerm, quesTypeFilter, categoryFilter])
 
   const onSubmit=async(e)=>{
-    
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      let finalQuesType = newQuesType;
+      let finalQuesCategory = newQuesCategory;
+
+      // Predict question type if 'not sure'
+      if (newQuesType === "notsure") {
+        const predictionResp = await fetch("http://127.0.0.1:8000/predict-question-type", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question: newQues }),
+        });
+
+        if (!predictionResp.ok) {
+          throw new Error("Failed to predict question type");
+        }
+
+        const predictionData = await predictionResp.json();
+        finalQuesType = predictionData.predicted_type;
+      }
+
+      // Predict question category if 'not sure'
+      if (newQuesCategory === "notsure") {
+        const categoryResp = await fetch("http://127.0.0.1:8000/predict-question-category", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ question: newQues }),
+        });
+
+        if (!categoryResp.ok) {
+          throw new Error("Failed to predict question category");
+        }
+
+        const categoryData = await categoryResp.json();
+        finalQuesCategory = categoryData.predicted_category;
+      }
+
+      // Insert new question into database
+      const resp = await db.insert(QuestionBank)
+      .values({
+        question: newQues,
+        quesType: finalQuesType,
+        category: finalQuesCategory.toLowerCase(),
+        jobRole: newJobRole,
+        createdBy: user?.primaryEmailAddress?.emailAddress,
+        createdAt: moment().format('DD-MM-yyyy'),
+      })
+      .returning();
+      if(resp){
+          setOpenPrompt(false);   // Close the prompt dialog
+          setNewQues("");
+          setNewQuesType("notsure");
+          setNewQuesCategory("notsure");
+          setNewJobRole("");
+          await getQuestionList(); // Refresh question list
+      }
+    } catch (error) {
+      console.error("Failed to upload question:", error);
+      alert("Something went wrong. Please try again.");
+    }
+    setLoading(false);
   }
 
   return (
@@ -87,8 +155,14 @@ function QuestionBankPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value='allCategory'>All Categories</SelectItem>
-            <SelectItem value='general'>General</SelectItem>
-            <SelectItem value='business & finance'>Business & Finance</SelectItem>
+            <SelectItem value="general">General</SelectItem>
+            <SelectItem value="healthcare">Healthcare</SelectItem>
+            <SelectItem value="engineering & it">Engineering & IT</SelectItem>
+            <SelectItem value="business & finance">Business & Finance</SelectItem>
+            <SelectItem value="public safety">Public Safety</SelectItem>
+            <SelectItem value="customer service">Customer Service</SelectItem>
+            <SelectItem value="education & literacy">Education & Literacy</SelectItem>
+            <SelectItem value="social services">Social Services</SelectItem>
           </SelectContent>
         </Select>
         <Button onClick={()=>setOpenPrompt(true)}>+ New Question</Button>
@@ -178,7 +252,19 @@ function QuestionBankPage() {
                               onChange={(event)=>setNewQues(event.target.value)}/>
                           </div>
                           <div className='my-3'>
+                            <div className="flex items-center gap-1">
                               <label className="text-black font-bold">Type <span className="text-red-500">*</span></label>
+                              <TooltipProvider>
+                                  <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Info className='text-gray-400 w-4 h-4 cursor-pointer' />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" className='bg-gray-500'>
+                                      <p>System will auto categorise question type if 'Not Sure' is selected.</p>
+                                  </TooltipContent>
+                                  </Tooltip>
+                              </TooltipProvider>
+                            </div>
                               <Select value={newQuesType} onValueChange={(value) => setNewQuesType(value)} required>
                                   <SelectTrigger className="w-[200px] bg-gray-100 p-2 rounded-md">
                                       <SelectValue placeholder="Select" />
@@ -191,14 +277,32 @@ function QuestionBankPage() {
                               </Select>
                           </div>
                           <div className='my-3'>
+                            <div className="flex items-center gap-1">
                               <label className="text-black font-bold">Category <span className="text-red-500">*</span></label>
+                              <TooltipProvider>
+                                  <Tooltip>
+                                  <TooltipTrigger asChild>
+                                      <Info className='text-gray-400 w-4 h-4 cursor-pointer' />
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right" className='bg-gray-500'>
+                                      <p>System will auto predict question category if 'Not Sure' is selected.</p>
+                                  </TooltipContent>
+                                  </Tooltip>
+                              </TooltipProvider>
+                            </div>
                               <Select value={newQuesCategory} onValueChange={(value) => setNewQuesCategory(value)} required>
                                   <SelectTrigger className="w-[300px] bg-gray-100 p-2 rounded-md">
                                       <SelectValue placeholder="Select" />
                                   </SelectTrigger>
                                   <SelectContent>
                                       <SelectItem value="general">General</SelectItem>
+                                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                                      <SelectItem value="engineering & it">Engineering & IT</SelectItem>
                                       <SelectItem value="business & finance">Business & Finance</SelectItem>
+                                      <SelectItem value="public safety">Public Safety</SelectItem>
+                                      <SelectItem value="customer service">Customer Service</SelectItem>
+                                      <SelectItem value="education & literacy">Education & Literacy</SelectItem>
+                                      <SelectItem value="social services">Social Services</SelectItem>
                                       <SelectItem value="notsure">Not Sure</SelectItem>
                                   </SelectContent>
                               </Select>

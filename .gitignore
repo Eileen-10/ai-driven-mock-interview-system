@@ -1,0 +1,5 @@
+# Ignore large model files
+backend/src/model/type_classifier_model.pt
+backend/src/model/category_classifier_model.pt
+backend/src/model/type_label_encoder.pkl
+backend/src/model/category_label_encoder.pkl
