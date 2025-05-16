@@ -63,14 +63,24 @@ function Feedback({params}) {
     setFeedbackList(feedbackData)
   }
 
-  const getSessionFeedback = async() => {
-    const sessionFeedback = await db.select()
-    .from(SessionFeedback)
-    .where(eq(SessionFeedback.mockIDRef, params.sessionId))
+  const getSessionFeedback = async (retries = 5, delay = 1000) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const sessionFeedback = await db.select()
+        .from(SessionFeedback)
+        .where(eq(SessionFeedback.mockIDRef, params.sessionId));
 
-    console.log(sessionFeedback)
-    setSessionFeedbackData(sessionFeedback)
-  }
+      if (sessionFeedback.length > 0) {
+        console.log('Feedback loaded:', sessionFeedback);
+        setSessionFeedbackData(sessionFeedback);
+        return;
+      }
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    console.warn('Session feedback not found after retries');
+  };
 
   const toggleCollapsible = (index) => {
     setOpenStates((prev) => ({
@@ -111,7 +121,7 @@ function Feedback({params}) {
       <div className='flex flex-col'>
         <div className='flex justify-between items-center'>
           <div>
-            <h2 className='font-bold text-lg'>{sessionData?.jobRole}</h2>
+            <h2 className='font-bold text-lg'>{sessionData?.jobRole ? sessionData.jobRole : 'Custom Session'}</h2>
             <h2 className='text-xs mt-1 flex text-gray-400'>
               <Calendar className='w-3.5 h-3.5 mr-1'/>{sessionData?.createdAt}
             </h2>
@@ -120,10 +130,12 @@ function Feedback({params}) {
         </div>
         <div className='grid grid-cols-[auto_1fr] gap-y-1 mx-2 w-fit mt-3'>
           <h2 className='text-sm font-semibold'>Job Description</h2>
-          <h2 className='text-sm ml-2'>: {sessionData?.jobDesc}</h2>
+          <h2 className='text-sm ml-2'>: {sessionData?.jobDesc ? sessionData.jobDesc : '-'}</h2>
 
           <h2 className='text-sm font-semibold'>Question Type</h2>
-          <h2 className='text-sm ml-2'>: {sessionData?.quesType.charAt(0).toUpperCase() + sessionData?.quesType.slice(1)}</h2>
+          <h2 className='text-sm ml-2'>: {sessionData?.quesType 
+          ? sessionData.quesType.charAt(0).toUpperCase() + sessionData.quesType.slice(1) 
+          : '-'}</h2>
           <h2 className='text-sm font-semibold'>Mode</h2>
           {sessionData?.conversationalMode? (
             <h2 className='text-sm ml-2'>: Conversational</h2>

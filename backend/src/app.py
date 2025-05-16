@@ -2,10 +2,13 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from typing import Optional
 import os
+import src.model.download_models
 from src.OCR import extract_text_from_pdf   # Import OCR function
-from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback    # Import LLM function
+from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback, generate_interview_answers # Import LLM function
 from src.similarity import compute_cosine_similarity
+from src.classification import predict_question_type, predict_question_category
 
 app = FastAPI()
 
@@ -52,6 +55,26 @@ async def generate_question(
     return JSONResponse(content={"questions": questions}, status_code=200)
 
 
+# == Suggested asnwer for custom session questions ==
+class AnswerGenerationRequest(BaseModel):
+    questions: list[str]
+    job_role: str = ""
+    job_desc: str = ""
+
+@app.post("/generate-suggested-answers/")
+async def generate_suggested_answers(request: AnswerGenerationRequest):
+    results = []
+
+    for q in request.questions:
+        generated = generate_interview_answers(
+            question=q,
+            job_role=request.job_role,
+            job_desc=request.job_desc,
+        )
+        results.append(generated)
+
+    return JSONResponse(content={"suggested": results}, status_code=200)
+
 # == Answer Evaluation for each ques ==
 class AnswerEvaluationRequest(BaseModel):
     interview_question: str
@@ -68,8 +91,8 @@ async def evaluate_answer(request: AnswerEvaluationRequest):
 
 # == Overall Evaluation for each session ==
 class SessionFeedbackRequest(BaseModel):
-    job_role: str
-    job_desc: str
+    job_role: Optional[str] = None
+    job_desc: Optional[str] = None
     responses: list  # List containing question,user answer & feedback for each ques
 
 @app.post("/evaluate-session/")
@@ -77,3 +100,18 @@ async def evaluate_session(request: SessionFeedbackRequest):
     session_feedback = generate_session_feedback(request.job_role, request.job_desc, request.responses)
 
     return JSONResponse(content={"session_feedback": session_feedback}, status_code=200)
+
+
+# == Classification for new ques type ==
+class QuestionInput(BaseModel):
+    question: str
+
+@app.post("/predict-question-type/")
+def classify_type(data: QuestionInput):
+    label = predict_question_type(data.question)
+    return {"predicted_type": label}
+
+@app.post("/predict-question-category/")
+async def predict_category(payload: QuestionInput):
+    category = predict_question_category(payload.question)
+    return {"predicted_category": category}

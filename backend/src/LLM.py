@@ -40,6 +40,26 @@ def generate_interview_questions(job_role, job_desc, ques_type, num_ques, doc_te
     })
 
 
+# == Suggested Answer for Custom Session Generation ==
+def generate_interview_answers(question, job_role="", job_desc=""):
+    prompt_template = PromptTemplate.from_template("""
+    Interview Question: {question}
+    Job Role/Position: {job_role}
+    Job Description: {job_desc}
+
+    Generate a high-quality suggested answer to the interview question above.
+    Return only JSON: {{ "question": "...", "answer": "..." }}
+    """)
+
+    chain = prompt_template | llm | RunnableLambda(lambda x: json.loads(x.content.replace("```json", "").replace("```", "").strip()))
+
+    return chain.invoke({
+        "question": question,
+        "job_role": job_role,
+        "job_desc": job_desc
+    })
+
+
 # == Evaluate user answer and generate feedback ==
 def generate_feedback(interview_question, user_answer):
     prompt_template = PromptTemplate.from_template("""
@@ -72,10 +92,20 @@ def generate_feedback(interview_question, user_answer):
 # == Generate overall session feedback ==
 def generate_session_feedback(job_role, job_desc, responses):
 
+    # Build dynamic context
+    context_parts = []
+
+    if job_role:
+        context_parts.append(f"Role: {job_role}")
+    if job_desc:
+        context_parts.append(f"Job Description: {job_desc}")
+
+    context_parts.append(f"Responses from the candidate: {json.dumps(responses, indent=2)}")
+    full_context = "\n".join(context_parts)
+
     prompt_template = PromptTemplate.from_template("""
-    You are an AI interview coach analyzing a completed mock interview session for the role of {job_role}.
-    Job Description: {job_desc}
-    Here are the responses from the candidate for each questions: {responses}
+    You are an AI interview coach analyzing a completed mock interview session.
+    {full_context}
 
     Based on this, provide:
     1. An overall rating (1-10) on the session performance.
@@ -100,9 +130,7 @@ def generate_session_feedback(job_role, job_desc, responses):
     chain = prompt_template | llm | RunnableLambda(lambda x: x.content)
 
     feedback = chain.invoke({
-        "job_role": job_role,
-        "job_desc": job_desc,
-        "responses": json.dumps(responses, indent=2)  # Convert list to JSON string for context
+        "full_context": full_context
     })
 
     # Ensure proper JSON format

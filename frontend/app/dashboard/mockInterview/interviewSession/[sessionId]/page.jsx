@@ -269,9 +269,12 @@ function InterviewSession({params}) {
                         <div className='flex flex-col gap-0'>
                             <h2 className='font-bold text-lg'>Session Details</h2>
                             <h2 className='italic text-xs text-gray-600'>Key details of your mock interview session.</h2>
-                            <h2 className='text-base mt-5'><strong>Job Role/Position: </strong>{interviewData?.jobRole}</h2>
-                            <h2 className='text-base mt-3'><strong>Job Scope/Description: </strong>{interviewData?.jobDesc}</h2>
-                            <h2 className='text-base mt-3'><strong>Question Type: </strong>{interviewData?.quesType.charAt(0).toUpperCase() + interviewData?.quesType.slice(1)}</h2>
+                            <h2 className='text-base mt-5'><strong>Job Role/Position: </strong>{interviewData?.jobRole ? interviewData.jobRole : '-'}</h2>
+                            <h2 className='text-base mt-3'><strong>Job Scope/Description: </strong>{interviewData?.jobDesc ? interviewData.jobDesc : '-'}</h2>
+                            <h2 className='text-base mt-3'><strong>Question Type: </strong>{interviewData?.quesType 
+                            ? interviewData.quesType.charAt(0).toUpperCase() + interviewData.quesType.slice(1) 
+                            : '-'}</h2>
+                            <h2 className='text-base mt-3'><strong>Mode: </strong>{interviewData?.conversationalMode ? 'Conversational' : 'Default'}</h2>
                             {interviewData?.supportingDoc && (
                                 <h2 className='text-base mt-3'><strong>Supporting Document: </strong>
                                 {interviewData.supportingDocURL ? (
