@@ -274,6 +274,7 @@ function InterviewSession({params}) {
                             <h2 className='text-base mt-3'><strong>Question Type: </strong>{interviewData?.quesType 
                             ? interviewData.quesType.charAt(0).toUpperCase() + interviewData.quesType.slice(1) 
                             : '-'}</h2>
+                            <h2 className='text-base mt-3'><strong>Mode: </strong>{interviewData?.conversationalMode ? 'Conversational' : 'Default'}</h2>
                             {interviewData?.supportingDoc && (
                                 <h2 className='text-base mt-3'><strong>Supporting Document: </strong>
                                 {interviewData.supportingDocURL ? (

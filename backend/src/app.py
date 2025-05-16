@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+from typing import Optional
 import os
 import src.model.download_models
 from src.OCR import extract_text_from_pdf   # Import OCR function
@@ -90,8 +91,8 @@ async def evaluate_answer(request: AnswerEvaluationRequest):
 
 # == Overall Evaluation for each session ==
 class SessionFeedbackRequest(BaseModel):
-    job_role: str
-    job_desc: str
+    job_role: Optional[str] = None
+    job_desc: Optional[str] = None
     responses: list  # List containing question,user answer & feedback for each ques
 
 @app.post("/evaluate-session/")

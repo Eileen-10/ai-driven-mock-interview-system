@@ -63,14 +63,24 @@ function Feedback({params}) {
     setFeedbackList(feedbackData)
   }
 
-  const getSessionFeedback = async() => {
-    const sessionFeedback = await db.select()
-    .from(SessionFeedback)
-    .where(eq(SessionFeedback.mockIDRef, params.sessionId))
+  const getSessionFeedback = async (retries = 5, delay = 1000) => {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      const sessionFeedback = await db.select()
+        .from(SessionFeedback)
+        .where(eq(SessionFeedback.mockIDRef, params.sessionId));
 
-    console.log(sessionFeedback)
-    setSessionFeedbackData(sessionFeedback)
-  }
+      if (sessionFeedback.length > 0) {
+        console.log('Feedback loaded:', sessionFeedback);
+        setSessionFeedbackData(sessionFeedback);
+        return;
+      }
+
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+
+    console.warn('Session feedback not found after retries');
+  };
 
   const toggleCollapsible = (index) => {
     setOpenStates((prev) => ({

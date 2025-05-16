@@ -42,7 +42,7 @@ function PastInterviewList() {
         <Tabs defaultValue="all" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="all" className="font-semibold">All</TabsTrigger>
-                <TabsTrigger value="default" className="font-semibold">Default</TabsTrigger>
+                <TabsTrigger value="default" className="font-semibold">Generated</TabsTrigger>
                 <TabsTrigger value="custom" className="font-semibold">Custom</TabsTrigger>
             </TabsList>
 

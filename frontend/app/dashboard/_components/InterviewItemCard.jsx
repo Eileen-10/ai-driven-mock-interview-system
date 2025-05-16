@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -53,10 +54,17 @@ function InterviewItemCard({interview, removeInterview}) {
     <div className={`border border-black rounded-xl p-5 hover:shadow-lg ${
     interview?.isCustom ? 'bg-[#FF8C00]/10' : 'bg-[#F2465E]/10'}`}>
         <h2 className='font-bold'>{interview?.jobRole ? interview.jobRole : 'Custom Session'}</h2>
-        <h2 className='text-sm'>{interview?.quesType 
-        ? interview.quesType.charAt(0).toUpperCase() + interview.quesType.slice(1) 
-        : '-'}</h2>
-        <h2 className='text-xs italic mt-1'>{interview?.jobDesc ? interview.jobDesc : '-'}</h2>
+        <div className='flex flex-wrap gap-2 mt-2'>
+            <Badge variant="outline" className="bg-[#9C02CE] text-white">
+            {interview?.quesType 
+            ? interview.quesType.charAt(0).toUpperCase() + interview.quesType.slice(1) 
+            : '-'}
+            </Badge>
+            <Badge variant="outline" className="bg-[#FF8C00] text-white">
+            {interview?.conversationalMode ? 'Conversational Mode' : 'Default Mode'}
+            </Badge>
+        </div>
+        <h2 className='text-xs italic mt-2'>{interview?.jobDesc ? interview.jobDesc : '-'}</h2>
         <div className='mt-3 flex flex-row items-center justify-between'>
             <h2 className='text-xs text-gray-500'>{interview?.createdAt}</h2>
             <div className='flex gap-1 ml-auto'>

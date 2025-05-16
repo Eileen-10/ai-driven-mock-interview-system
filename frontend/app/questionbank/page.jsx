@@ -204,12 +204,6 @@ function QuestionBankPage() {
           console.log("Error storing data");
       }
 
-      // Clean variables
-      // setSelectedQuestions([]);
-      // setJobRole();
-      // setJobDesc();
-      // setOpenSessionPrompt(false);
-
     } catch (error) {
       console.error("Failed to save session:", error);
     } finally {
