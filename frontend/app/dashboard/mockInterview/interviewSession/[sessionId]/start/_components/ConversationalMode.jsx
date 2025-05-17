@@ -1,6 +1,6 @@
 "use client"
 import { useUser } from '@clerk/nextjs'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { AudioWaveform, CaptionsOff, Info, Settings, Video, VideoOff } from 'lucide-react';
 import { vapi } from "@/lib/vapi.sdk";
 import { interviewer } from "@/constants";
@@ -14,6 +14,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { db } from '@/utils/db';
 import { SessionFeedback, UserAnswerConversational } from '@/utils/schema';
 import moment from 'moment';
+import { createClient } from '@supabase/supabase-js';
+import RecordRTC from 'recordrtc'
 
 const CallStatus = {
     INACTIVE: "INACTIVE",
@@ -22,7 +24,12 @@ const CallStatus = {
     FINISHED: "FINISHED",
 };
 
-function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params}) {
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY
+)
+
+function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params, recordingStatus}) {
     const {user} = useUser()
     const router=useRouter()
     const [AIisSpeaking, setAIisSpeaking] = useState(false)
@@ -123,6 +130,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
                     questions: formattedQuestions,
                 },
             });
+
         } catch (error) {
             console.error("Error starting the call:", error);
         }
@@ -139,6 +147,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
           .values({
             mockIDRef:interviewData?.mockID,
             dialog:JSON.stringify(messages),
+            // audioURL:videoUrl ? videoUrl : null,
             createdBy:user?.primaryEmailAddress?.emailAddress,
             createdAt:moment().format('DD-MM-yyyy')
           })
@@ -148,7 +157,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
         }
 
         // Generate & store session feedback
-        generateSessionFeedback();
+        await generateSessionFeedback();
 
         router.push('/dashboard/mockInterview/interviewSession/'+interviewData?.mockID+'/feedback')
     };

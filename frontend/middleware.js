@@ -1,4 +1,3 @@
-'use client'
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 // Define route for protection

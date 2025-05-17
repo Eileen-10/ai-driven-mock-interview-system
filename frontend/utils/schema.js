@@ -29,6 +29,7 @@ export const UserAnswer = pgTable('userAnswer', {
     similarityScore:numeric('similarityScore'),     // Similarity Score
     rating:integer('rating'),                       // Rating
     feedback:text('feedback'),                      // Feedback
+    audioURL:text('audioURL'),                      // Audio recording URL
     createdBy:varchar('createdBy'),
     createdAt:varchar('createdAt')
 })
@@ -37,6 +38,7 @@ export const UserAnswerConversational = pgTable('userAnswerConversational', {
     id:serial('id').primaryKey(),
     mockIDRef:varchar('mockID').notNull(),
     dialog:text('dialog'),                  // Interviewer & User dialog
+    audioURL:text('audioURL'),              // Audio recording URL
     createdBy:varchar('createdBy'),
     createdAt:varchar('createdAt')
 })

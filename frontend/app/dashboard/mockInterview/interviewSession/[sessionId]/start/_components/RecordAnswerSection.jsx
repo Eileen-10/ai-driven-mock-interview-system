@@ -12,12 +12,19 @@ import Webcam from 'react-webcam'
 import RecordRTC from 'recordrtc'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { createClient } from '@supabase/supabase-js'
 
 const assemblyAI = new AssemblyAI({
   apiKey:process.env.NEXT_PUBLIC_ASSEMBLY_API_KEY
 })
 
-function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, mockInterviewQuestion, activeQuestionIndex, interviewData}) {
+// Create a Supabase client using public anon key
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY
+)
+
+function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, mockInterviewQuestion, activeQuestionIndex, interviewData, recordingStatus}) {
   
   const {user} = useUser()
   const [loading, setLoading] = useState(false)
@@ -79,21 +86,32 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
     setLoading(true)
     if (recorder.current) {
-      recorder.current.stopRecording(() => {
+      recorder.current.stopRecording(async () => {
         const blob = recorder.current.getBlob();
         const url = URL.createObjectURL(blob);
         setAudioBlob(blob);
         setAudioURL(url);
-        transcribeAudio(blob);
+
+        try {
+          let audioUrl = null;
+
+          if (recordingStatus) {
+            audioUrl = await uploadAudioToSupabase(blob); // Upload to supabase
+          }
+          await transcribeAudio(blob, audioUrl);  // Pass audioUrl for UserAnswer db insert
+        } catch (error) {
+          console.error("Error uploading or transcribing:", error);
+          setLoading(false);
+        }
       });
     }
     setIsRecording(false);
   };
 
-  const transcribeAudio = async (blob) => {
+  const transcribeAudio = async (blob, audioUrl) => {
     try {
       // Convert blob to File object for upload
       const file = new File([blob], "recording.webm", { type: "audio/webm" });
@@ -111,17 +129,16 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
         return;
       }
 
+      evaluateAnswer(transcript.text, audioUrl);
+
     } catch (error) {
       console.error("Error transcribing audio:", error);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    if(!isRecording && answerTranscript.length >= 10) {evaluateAnswer()}
-  },[answerTranscript])
-
-  const evaluateAnswer = async() => {
-    console.log(answerTranscript)
+  const evaluateAnswer = async(transcriptText, audioUrl) => {
+    console.log(transcriptText)
     
     // Call for LLM & similarity from FastAPI
     // To calculate Similarity Score & generate Rating + Feedback
@@ -134,7 +151,7 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
         body: JSON.stringify({
           interview_question: mockInterviewQuestion[activeQuestionIndex]?.question,
           suggested_answer: mockInterviewQuestion[activeQuestionIndex]?.answer,
-          user_answer: answerTranscript
+          user_answer: transcriptText
         })
       });
   
@@ -155,10 +172,11 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
           mockIDRef:interviewData?.mockID,
           question:mockInterviewQuestion[activeQuestionIndex]?.question,
           suggestedAns:mockInterviewQuestion[activeQuestionIndex]?.answer,
-          userAns:answerTranscript,
+          userAns:transcriptText,
           similarityScore:feedbackJsonResponse?.similarity_score,
           rating:feedbackJsonResponse?.feedback?.[0]?.rating,
           feedback:feedbackJsonResponse?.feedback?.[0]?.feedback,
+          audioURL:audioUrl ? audioUrl : null,
           createdBy:user?.primaryEmailAddress?.emailAddress,
           createdAt:moment().format('DD-MM-yyyy')
         })
@@ -176,6 +194,7 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
   
     } catch (error) {
       console.error("Error evaluating answer:", error);
+      setLoading(false);
     }
   }
 
@@ -197,6 +216,33 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
     localStorage.setItem("selectedMicrophone", selectedMicrophone);
     setIsSettingsOpen(false);
   }
+
+  const uploadAudioToSupabase = async (blob) => {
+    const ext = 'webm';
+    const uniqueSuffix = Date.now();
+    const fileName = `${uniqueSuffix}.${ext}`;
+    const filePath = `audio/${user.id}/${interviewData?.mockID}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('mock-iv-sessions')
+      .upload(filePath, blob, {
+        cacheControl: '3600',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      return;
+    } 
+
+    const { data: { publicUrl } } = supabase
+      .storage
+      .from('mock-iv-sessions')
+      .getPublicUrl(filePath);
+
+    console.log('Public URL:', publicUrl);
+    return publicUrl;
+  };
   
   return (
     <div className='flex flex-row justify-center items-center relative'>

@@ -19,6 +19,7 @@ function StartInterview({params}) {
   const [recordingStatus, setRecordingStatus] = useState(false);
   const webcamRef = useRef(null);
   const {user} = useUser()
+  const [hasStoppedRecording, setHasStoppedRecording] = useState(false);
   
   useEffect(()=>{
     GetInterviewDetails();
@@ -99,11 +100,12 @@ function StartInterview({params}) {
   }
 
   const toggleRecordingStatus = () => {
-    setRecordingStatus((prev) => {
-      const newRecordingState = !prev;
-      localStorage.setItem("recordingEnabled", newRecordingState);
-      return newRecordingState;
-    });
+    if (recordingStatus && !hasStoppedRecording) {
+      // Stop recording
+      setRecordingStatus(false);
+      setHasStoppedRecording(true);
+      localStorage.setItem("recordingEnabled", "false");
+    }
   };
   
   return (
@@ -115,10 +117,16 @@ function StartInterview({params}) {
           {/* <h2 className='text-xs pt-1 text-gray-400'>{interviewData?.quesType}</h2> */}
         </div>
         <div>
-          <Button className='bg-[#310444] hover:bg-[#9C02CE] mr-8' onClick={toggleRecordingStatus}>
-          {recordingStatus ? <Pause /> : <Play />}
-          {recordingStatus ? "Stop Recording" : "Start Recording"}
-          </Button>
+          {(recordingStatus || hasStoppedRecording) && (
+            <Button
+              className='bg-[#310444] hover:bg-[#9C02CE] mr-8'
+              onClick={toggleRecordingStatus}
+              disabled={hasStoppedRecording}
+            >
+              <Pause className="mr-2" />
+              Stop Recording
+            </Button>
+          )}
         </div>
       </div>
       
@@ -133,6 +141,7 @@ function StartInterview({params}) {
         webcamRef={webcamRef}
         interviewData={interviewData}
         params={params}
+        recordingStatus={recordingStatus}
         />
       ) : (
         // Default Mode
@@ -147,6 +156,7 @@ function StartInterview({params}) {
             webcamRef={webcamRef}
             interviewData={interviewData}
             params={params}
+            recordingStatus={recordingStatus}
             />
           </div>
         </div>
