@@ -29,6 +29,7 @@ export const UserAnswer = pgTable('userAnswer', {
     similarityScore:numeric('similarityScore'),     // Similarity Score
     rating:integer('rating'),                       // Rating
     feedback:text('feedback'),                      // Feedback
+    audioURL:text('audioURL'),                      // Audio recording URL (cam x enabled)
     createdBy:varchar('createdBy'),
     createdAt:varchar('createdAt')
 })
@@ -51,6 +52,7 @@ export const SessionFeedback = pgTable('sessionFeedback', {
     confRating:integer('confRating'),           // Confidence & Clarity rating
     areaImprovement:text('areaImprovement'),    // Area for Improvement
     advice:text('advice'),                      // Actionable advice
+    recordingURL:text('recordingURL'),          // Screen recording URL
     createdBy:varchar('createdBy'),
     createdAt:varchar('createdAt')
 })

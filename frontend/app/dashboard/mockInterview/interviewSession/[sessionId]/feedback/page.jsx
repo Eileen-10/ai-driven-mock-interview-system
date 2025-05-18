@@ -20,6 +20,7 @@ function Feedback({params}) {
   const [feedbackList, setFeedbackList] = useState([])
   const [sessionFeedbackData, setSessionFeedbackData] = useState()
   const [dialog, setDialog] = useState([])
+  const [recordingURL, setRecordingURL] = useState(null);
   const [openStates, setOpenStates] = useState({})
   const router = useRouter()
 
@@ -72,6 +73,12 @@ function Feedback({params}) {
       if (sessionFeedback.length > 0) {
         console.log('Feedback loaded:', sessionFeedback);
         setSessionFeedbackData(sessionFeedback);
+
+        const url = sessionFeedback[0]?.recordingURL;
+        if (url) {
+          setRecordingURL(url); // Save recording URL
+        }
+
         return;
       }
 
@@ -126,7 +133,17 @@ function Feedback({params}) {
               <Calendar className='w-3.5 h-3.5 mr-1'/>{sessionData?.createdAt}
             </h2>
           </div>
-          <Button className='rounded-xl bg-black p-5 hover:bg-[#FF8C00]'>View Recording</Button>
+          {recordingURL && (
+            <a
+              href={recordingURL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button className="rounded-xl bg-black p-5 hover:bg-[#FF8C00]">
+                View Recording
+              </Button>
+            </a>
+          )}
         </div>
         <div className='grid grid-cols-[auto_1fr] gap-y-1 mx-2 w-fit mt-3'>
           <h2 className='text-sm font-semibold'>Job Description</h2>
@@ -223,8 +240,13 @@ function Feedback({params}) {
           <CollapsibleContent>
             <div className='px-5'>
               <h2 className='text-sm mt-5'><strong>Your Answer: </strong></h2>
-              <h2 className='text-sm mt-1'>{item.userAns}</h2>
+              <h2 className='text-sm mt-1'>{item.userAns}</h2> 
             </div>
+            {item.audioURL && (
+              <div className="flex justify-center my-3">
+                <audio controls src={item.audioURL} />
+              </div>
+            )}
             <div className='flex flex-col bg-[#40E0D0] rounded-xl border border-black my-3 px-6 py-5 justify-between h-auto'>
               <h2 className='text-sm flex'><MessageSquare className='w-5 h-5 mr-2'/><strong>Feedback: </strong></h2>
               <h2 className='text-sm mt-2 mx-2'><ReactMarkdown>{item.feedback}</ReactMarkdown></h2>

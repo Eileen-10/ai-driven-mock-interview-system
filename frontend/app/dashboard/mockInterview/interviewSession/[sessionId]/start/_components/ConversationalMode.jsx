@@ -1,6 +1,6 @@
 "use client"
 import { useUser } from '@clerk/nextjs'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { AudioWaveform, CaptionsOff, Info, Settings, Video, VideoOff } from 'lucide-react';
 import { vapi } from "@/lib/vapi.sdk";
 import { interviewer } from "@/constants";
@@ -14,15 +14,23 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { db } from '@/utils/db';
 import { SessionFeedback, UserAnswerConversational } from '@/utils/schema';
 import moment from 'moment';
+import { createClient } from '@supabase/supabase-js';
+import RecordRTC from 'recordrtc'
 
 const CallStatus = {
     INACTIVE: "INACTIVE",
     CONNECTING: "CONNECTING",
     ACTIVE: "ACTIVE",
     FINISHED: "FINISHED",
+    GENERATING_FEEDBACK: "GENERATING_FEEDBACK",
 };
 
-function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params}) {
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY
+)
+
+function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params, onEndCall, recordingURL}) {
     const {user} = useUser()
     const router=useRouter()
     const [AIisSpeaking, setAIisSpeaking] = useState(false)
@@ -36,6 +44,12 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)   // Cam & Mic setting
     const isCameraOn = Boolean(selectedCamera);                   // Toggle to on/off camera
     const [isCaptionOn, setIsCaptionOn] = useState(true);         // Toggle to show/hide caption
+    const recordingUrlRef = useRef(recordingURL);
+    const [callEnded, setCallEnded] = useState(false);
+
+    useEffect(() => {
+      recordingUrlRef.current = recordingURL;
+    }, [recordingURL]);
 
     useEffect(() => {
       console.log("All messages:", messages);
@@ -123,6 +137,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
                     questions: formattedQuestions,
                 },
             });
+
         } catch (error) {
             console.error("Error starting the call:", error);
         }
@@ -132,28 +147,41 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
     const handleDisconnect = async() => {
         setCallStatus(CallStatus.FINISHED);
         vapi.stop();
+        onEndCall();  // End Recording
+        setCallEnded(true); // mark call ended
 
-        // Save dialog to db
-        if(messages){
-          const resp=await db.insert(UserAnswerConversational)
-          .values({
-            mockIDRef:interviewData?.mockID,
-            dialog:JSON.stringify(messages),
-            createdBy:user?.primaryEmailAddress?.emailAddress,
-            createdAt:moment().format('DD-MM-yyyy')
-          })
-          if(resp){
-            console.log("Dialog saved successfully")
-          }
-        }
-
-        // Generate & store session feedback
-        generateSessionFeedback();
-
-        router.push('/dashboard/mockInterview/interviewSession/'+interviewData?.mockID+'/feedback')
+        setCallStatus(CallStatus.GENERATING_FEEDBACK);
     };
 
-    const generateSessionFeedback = async() => {     
+    // Listen for recordingURL updates after call ends
+    useEffect(() => {
+      if (callEnded && recordingUrlRef.current) {
+        // Save dialog and recording URL to db
+        (async () => {
+          console.log("Saving dialog with recording URL:", recordingUrlRef.current);
+          
+          if(messages){
+            const resp=await db.insert(UserAnswerConversational)
+              .values({
+                mockIDRef: interviewData?.mockID,
+                dialog: JSON.stringify(messages),
+                createdBy: user?.primaryEmailAddress?.emailAddress,
+                createdAt: moment().format('DD-MM-yyyy')
+              });
+            if(resp){
+              console.log("Dialog saved successfully");
+            }
+          }
+
+          // Generate & store session feedback
+          await generateSessionFeedback(recordingUrlRef.current);
+
+          router.push('/dashboard/mockInterview/interviewSession/' + interviewData?.mockID + '/feedback');
+        })();
+      }
+    }, [callEnded, recordingURL]);
+
+    const generateSessionFeedback = async(recordingURL) => {     
       try {
         const responses = messages.map((message) => ({
           role: message.role,
@@ -190,6 +218,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
                 confRating:sessionFeedback?.session_feedback?.rate_conf,
                 areaImprovement:sessionFeedback?.session_feedback?.area_improvement,
                 advice:sessionFeedback?.session_feedback?.advice,
+                recordingURL: recordingURL || null,
                 createdBy:user?.primaryEmailAddress?.emailAddress,
                 createdAt:moment().format('DD-MM-yyyy')
               })
@@ -410,20 +439,27 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
       </div>
           
       <div className="w-full flex justify-center">
-          {callStatus !== "ACTIVE" ? (
-          <button
+          {callStatus !== "ACTIVE" && callStatus !== "GENERATING_FEEDBACK" ? (
+            <button
               onClick={handleCall}
               className="px-6 py-2 mr-10 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-          >
+            >
               {callStatus === "CONNECTING" ? "Connecting..." : "Call"}
-          </button>
-          ) : (
-          <button
+            </button>
+          ) : callStatus === "ACTIVE" ? (
+            <button
               onClick={handleDisconnect}
               className="px-6 py-2 mr-10 bg-red-700 text-white rounded-lg hover:bg-red-800 transition"
-          >
+            >
               End
-          </button>
+            </button>
+          ) : (
+            <button
+              disabled
+              className="px-6 py-2 mr-10 bg-gray-500 text-white rounded-lg cursor-not-allowed"
+            >
+              Generating feedback...
+            </button>
           )}
       </div>
       

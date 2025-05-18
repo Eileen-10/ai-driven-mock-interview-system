@@ -226,8 +226,9 @@ function InterviewSession({params}) {
             } else {
                 localStorage.removeItem("selectedCamera") // Remove if only mic is used
             }
-
+    
             router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
+
         }
         
         // Else, try requesting for mic permission
@@ -244,6 +245,7 @@ function InterviewSession({params}) {
                 }
 
                 router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
+                
             }
         
         // If permission rejected, alert mic requirement
