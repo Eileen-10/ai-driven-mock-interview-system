@@ -226,18 +226,8 @@ function InterviewSession({params}) {
             } else {
                 localStorage.removeItem("selectedCamera") // Remove if only mic is used
             }
-            
-            // if (recordingEnabled) {
-            //     // Open new tab for the start session
-            //     const newTab = window.open('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
-            //     if (!newTab) {
-            //         alert("Popup blocked. Please allow popups for this site.");
-            //         return;
-            //     }
-
-            // } else {
-                router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
-            // }
+    
+            router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
 
         }
         
@@ -254,26 +244,7 @@ function InterviewSession({params}) {
                     localStorage.removeItem("selectedCamera") // Remove if only mic is used
                 }
 
-                // if (recordingEnabled) {
-                    // Open new tab for the start session
-                    // const newTab = window.open('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
-                    // if (!newTab) {
-                    //     alert("Popup blocked. Please allow popups for this site.");
-                    //     return;
-                    // }
-                    // screenStream = await navigator.mediaDevices.getDisplayMedia({
-                    //     video: true,
-                    //     audio: true // This will include system audio if user checks the box
-                    // });
-                    // Send stream to new tab using BroadcastChannel
-                    // if (recordingEnabled && screenStream) {
-                    //     const channel = new BroadcastChannel("screen-recording");
-                    //     // We can't directly send MediaStream, but can notify to start recording in new tab
-                    //     channel.postMessage("start-recording");
-                    // }
-                // } else {
-                    router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
-                // }
+                router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
                 
             }
         

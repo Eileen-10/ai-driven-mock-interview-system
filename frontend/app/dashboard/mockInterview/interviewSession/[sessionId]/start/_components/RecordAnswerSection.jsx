@@ -24,7 +24,7 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_KEY
 )
 
-function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, mockInterviewQuestion, activeQuestionIndex, interviewData, recordingStatus}) {
+function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, mockInterviewQuestion, activeQuestionIndex, interviewData, recordingStatus, recordingURL}) {
   
   const {user} = useUser()
   const [loading, setLoading] = useState(false)
@@ -177,6 +177,7 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
           rating:feedbackJsonResponse?.feedback?.[0]?.rating,
           feedback:feedbackJsonResponse?.feedback?.[0]?.feedback,
           audioURL:audioUrl ? audioUrl : null,
+          recordingURL:recordingURL ? recordingURL : null,
           createdBy:user?.primaryEmailAddress?.emailAddress,
           createdAt:moment().format('DD-MM-yyyy')
         })

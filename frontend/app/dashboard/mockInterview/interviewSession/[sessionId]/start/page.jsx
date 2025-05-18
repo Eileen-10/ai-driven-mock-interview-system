@@ -50,18 +50,46 @@ function StartInterview({params}) {
       setElapsedTime((prev) => prev + 1);
     }, 1000);
 
-    toast({
-      description: (
-        <div className="flex items-center gap-1 text-white text-xs">
-          <Info className="h-4 w-4" />
-          Click <strong>{savedRecordingStatus === "true" ? "Start Recording, then Call" : "Call"}</strong> whenever you're ready!
-        </div>
-      ),
-      className: "bg-[#F2465E]",
-    });
-
     return () => clearInterval(timer);
   },[])
+
+  useEffect(() => {
+    if (interviewData?.conversationalMode) {
+      toast({
+        description: (
+          <div className="flex items-center gap-1 text-white text-xs">
+            <Info className="h-4 w-4" />
+            Click <strong>{recordingStatus ? "Start Recording, then Call" : "Call"}</strong> whenever you're ready!
+          </div>
+        ),
+        className: "bg-[#F2465E]",
+      });
+    } else if (recordingStatus && !interviewData?.conversationalMode && selectedCamera) {
+      toast({
+        description: (
+          <div className="flex flex-wrap items-center gap-1 text-white text-xs break-words">
+            <Info className="h-4 w-4 shrink-0" />
+            <span>
+              Click <strong>Start Recording & Record Answer</strong> whenever you're ready!
+            </span>
+          </div>
+        ),
+        className: "bg-[#F2465E]",
+      });
+    } else if (!interviewData?.conversationalMode) {
+      toast({
+        description: (
+          <div className="flex flex-wrap items-center gap-1 text-white text-xs break-words">
+            <Info className="h-4 w-4 shrink-0" />
+            <span>
+              Click <strong>Record Answer</strong> whenever you're ready!
+            </span>
+          </div>
+        ),
+        className: "bg-[#F2465E]",
+      });
+    }
+  }, [interviewData, recordingStatus, selectedCamera]);
 
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
@@ -181,18 +209,25 @@ function StartInterview({params}) {
           {/* <h2 className='text-xs pt-1 text-gray-400'>{interviewData?.quesType}</h2> */}
         </div>
         <div>
-          {recordingStatus && (
+          {(
+            (interviewData?.conversationalMode && recordingStatus) ||
+            (!interviewData?.conversationalMode && recordingStatus && selectedCamera)
+          ) && (
             <Button
               className={`bg-[#310444] hover:bg-[#9C02CE] mr-8`}
               onClick={toggleRecordingStatus}
               disabled={hasStoppedRecording}
             >
               {isRecording ? (
-                <><Pause className="mr-2" />
-                  Stop Recording</>
+                <>
+                  <Pause className="mr-2" />
+                  Stop Recording
+                </>
               ) : (
-                <><Play className="mr-2" />
-                  Start Recording</>
+                <>
+                  <Play className="mr-2" />
+                  Start Recording
+                </>
               )}
             </Button>
           )}
@@ -227,13 +262,12 @@ function StartInterview({params}) {
             interviewData={interviewData}
             params={params}
             recordingStatus={recordingStatus}
+            onEndCall={handleEndCall}
+            recordingURL={recordingURL}
             />
           </div>
         </div>
       )}
-      {/* {mediaBlobUrl && (
-        <video src={mediaBlobUrl} controls autoPlay style={{ maxWidth: "100%" }} />
-      )} */}
     </div>
     
   )

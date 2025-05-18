@@ -1,6 +1,6 @@
 "use client"
 import { CircleArrowRight, Lightbulb, Volume2 } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import RecordAnswerSection from './RecordAnswerSection'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
@@ -10,11 +10,17 @@ import { InterviewPrompt, SessionFeedback, UserAnswer } from '@/utils/schema'
 import { useUser } from '@clerk/nextjs'
 import moment from 'moment'
 
-function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params, recordingStatus}) {
+function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params, recordingStatus, onEndCall, recordingURL}) {
     const {user} = useUser()
     const [activeQuestionIndex, setActiveQuestionIndex] = useState(0)
     const [sessionData, setSessionData] = useState()
     const [feedbackList, setFeedbackList] = useState([])
+    const recordingUrlRef = useRef(recordingURL);
+    const [interviewEnded, setInterviewEnded] = useState(false);
+
+    useEffect(() => {
+        recordingUrlRef.current = recordingURL;
+    }, [recordingURL]);
 
     const handleNextQuestion = () => {
         if (activeQuestionIndex < mockInterviewQuestion.length - 1) {
@@ -32,7 +38,9 @@ function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCame
     }
 
     const generateSessionFeedback = async() => {
-        
+        onEndCall(); // Stop screen recording
+        setInterviewEnded(true);
+
         try {
             // Get data for session (Job Role, Desc)
             const sessionData = await db.select()
@@ -84,6 +92,16 @@ function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCame
             }
             const sessionFeedback = await response.json();
             console.log("Session Feedback:", sessionFeedback);
+
+            // Wait for recording URL to be ready
+            let attempts = 0;
+            while (!recordingUrlRef.current && attempts < 10) {
+            console.log("Waiting for recording URL...");
+            await new Promise((resolve) => setTimeout(resolve, 500));
+            attempts++;
+            }
+
+            const finalRecordingURL = recordingUrlRef.current || null;
     
             // Store in SessionFeedback db
             if (sessionFeedback){
@@ -97,6 +115,7 @@ function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCame
                   confRating:sessionFeedback?.session_feedback?.rate_conf,
                   areaImprovement:sessionFeedback?.session_feedback?.area_improvement,
                   advice:sessionFeedback?.session_feedback?.advice,
+                  recordingURL:finalRecordingURL,
                   createdBy:user?.primaryEmailAddress?.emailAddress,
                   createdAt:moment().format('DD-MM-yyyy')
                 })
@@ -139,6 +158,7 @@ function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCame
                 activeQuestionIndex={activeQuestionIndex}
                 interviewData={interviewData}
                 recordingStatus={recordingStatus}
+                recordingURL={recordingURL}
                 />
             </div>
             <div className='mt-3 p-5 border rounded-lg border-black bg-[#40E0D0] text-black flex items-start gap-3'>

@@ -151,28 +151,6 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
         setCallEnded(true); // mark call ended
 
         setCallStatus(CallStatus.GENERATING_FEEDBACK);
-
-        // console.log("URL before saving to db: ", recordingUrlRef.current)
-
-        // // Save dialog to db
-        // if(messages){
-        //   const resp=await db.insert(UserAnswerConversational)
-        //   .values({
-        //     mockIDRef:interviewData?.mockID,
-        //     dialog:JSON.stringify(messages),
-        //     // audioURL:videoUrl ? videoUrl : null,
-        //     createdBy:user?.primaryEmailAddress?.emailAddress,
-        //     createdAt:moment().format('DD-MM-yyyy')
-        //   })
-        //   if(resp){
-        //     console.log("Dialog saved successfully")
-        //   }
-        // }
-
-        // // Generate & store session feedback
-        // await generateSessionFeedback();
-
-        // router.push('/dashboard/mockInterview/interviewSession/'+interviewData?.mockID+'/feedback')
     };
 
     // Listen for recordingURL updates after call ends
@@ -187,7 +165,6 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
               .values({
                 mockIDRef: interviewData?.mockID,
                 dialog: JSON.stringify(messages),
-                recordingURL: recordingUrlRef.current ? recordingUrlRef.current : null,
                 createdBy: user?.primaryEmailAddress?.emailAddress,
                 createdAt: moment().format('DD-MM-yyyy')
               });
@@ -197,14 +174,14 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
           }
 
           // Generate & store session feedback
-          // await generateSessionFeedback();
+          await generateSessionFeedback(recordingUrlRef.current);
 
           router.push('/dashboard/mockInterview/interviewSession/' + interviewData?.mockID + '/feedback');
         })();
       }
     }, [callEnded, recordingURL]);
 
-    const generateSessionFeedback = async() => {     
+    const generateSessionFeedback = async(recordingURL) => {     
       try {
         const responses = messages.map((message) => ({
           role: message.role,
@@ -241,6 +218,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
                 confRating:sessionFeedback?.session_feedback?.rate_conf,
                 areaImprovement:sessionFeedback?.session_feedback?.area_improvement,
                 advice:sessionFeedback?.session_feedback?.advice,
+                recordingURL: recordingURL || null,
                 createdBy:user?.primaryEmailAddress?.emailAddress,
                 createdAt:moment().format('DD-MM-yyyy')
               })

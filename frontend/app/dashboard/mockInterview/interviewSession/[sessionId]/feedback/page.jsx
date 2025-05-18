@@ -52,10 +52,6 @@ function Feedback({params}) {
       const parsedDialog = JSON.parse(dialogData[0].dialog); // clean parse
       setDialog(parsedDialog);
     }
-
-    if (dialogData[0].recordingURL) {
-      setRecordingURL(dialogData[0].recordingURL); // Save recording URL
-    }
   }
   
   const getFeedback = async() => {
@@ -77,6 +73,12 @@ function Feedback({params}) {
       if (sessionFeedback.length > 0) {
         console.log('Feedback loaded:', sessionFeedback);
         setSessionFeedbackData(sessionFeedback);
+
+        const url = sessionFeedback[0]?.recordingURL;
+        if (url) {
+          setRecordingURL(url); // Save recording URL
+        }
+
         return;
       }
 

@@ -155,7 +155,9 @@ function RecordPrompt() {
   return (
     <div className="p-6 font-sans text-sm text-white text-center">
       <h2 className="font-bold text-xl mb-6">🔴 Session Recording</h2>
-      <h2 className="text-base mb-5">Make sure the correct tab is selected &<br/>'Also share tab audio' is enabled.</h2>
+      {!mediaBlobUrl && (
+        <h2 className="text-base mb-5">Make sure the correct tab is selected &<br/>'Also share tab audio' is enabled.</h2>
+      )}
 
       {!hasStartedRecording && !mediaBlobUrl && (
         <Button
@@ -173,15 +175,20 @@ function RecordPrompt() {
       )}
 
       {mediaBlobUrl && (
-        <div className="mt-4">
-          <h3 className="font-semibold mb-2">Recording Complete:</h3>
-          <video
-            src={mediaBlobUrl}
-            controls
-            autoPlay
-            className="max-w-full rounded shadow"
-          />
+        <div className="mt-10 text-green-400 space-y-2">
+          <p className="text-base font-semibold">✅ Recording saved successfully</p>
+          <p>You may close this tab now.</p>
         </div>
+
+        // <div className="mt-4">
+        //   <h3 className="font-semibold mb-2">Recording Complete:</h3>
+        //   <video
+        //     src={mediaBlobUrl}
+        //     controls
+        //     autoPlay
+        //     className="max-w-full rounded shadow"
+        //   />
+        // </div>
       )}
 
       {error && <p className="text-red-600 mt-4">{error}</p>}
