@@ -5,9 +5,11 @@ import { eq } from 'drizzle-orm';
 import React, { useEffect, useState, useRef } from 'react'
 import QuestionSection from './_components/QuestionSection';
 import { Button } from '@/components/ui/button';
-import { Pause, Play } from 'lucide-react';
+import { Info, Pause, Play } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import ConversationalMode from './_components/ConversationalMode';
+import { useReactMediaRecorder } from "react-media-recorder";
+import { toast } from '@/hooks/use-toast';
 
 function StartInterview({params}) {
   
@@ -19,7 +21,9 @@ function StartInterview({params}) {
   const [recordingStatus, setRecordingStatus] = useState(false);
   const webcamRef = useRef(null);
   const {user} = useUser()
+  const [isRecording, setIsRecording] = useState(false);
   const [hasStoppedRecording, setHasStoppedRecording] = useState(false);
+  const [recordingURL, setRecordingURL] = useState("")
   
   useEffect(()=>{
     GetInterviewDetails();
@@ -45,8 +49,18 @@ function StartInterview({params}) {
     const timer = setInterval(() => {
       setElapsedTime((prev) => prev + 1);
     }, 1000);
-    return () => clearInterval(timer);
 
+    toast({
+      description: (
+        <div className="flex items-center gap-1 text-white text-xs">
+          <Info className="h-4 w-4" />
+          Click <strong>{savedRecordingStatus === "true" ? "Start Recording, then Call" : "Call"}</strong> whenever you're ready!
+        </div>
+      ),
+      className: "bg-[#F2465E]",
+    });
+
+    return () => clearInterval(timer);
   },[])
 
   const formatTime = (seconds) => {
@@ -99,15 +113,65 @@ function StartInterview({params}) {
     }
   }
 
+  const popupRef = useRef(null);
   const toggleRecordingStatus = () => {
-    if (recordingStatus && !hasStoppedRecording) {
-      // Stop recording
-      setRecordingStatus(false);
-      setHasStoppedRecording(true);
-      localStorage.setItem("recordingEnabled", "false");
+    if (!isRecording) {
+      setIsRecording(true);
+      const popup = window.open(
+        `/${interviewData.mockID}/recordPrompt`,
+        "ScreenRecorder",
+        "width=650,height=550"
+      );
+      if (popup) {
+        popupRef.current = popup;
+        popup.onload = () => {
+          sendMessageToPopout("START_RECORDING");
+        };
+      }
+    } else {
+      setIsRecording(false);
+      setHasStoppedRecording(true)
+      sendMessageToPopout("STOP_RECORDING");
     }
   };
-  
+
+  const sendMessageToPopout = (type) => {
+    const interval = setInterval(() => {
+      if (popupRef.current && !popupRef.current.closed) {
+        popupRef.current.postMessage(
+          { type },
+          window.location.origin
+        );
+        console.log(`Sending message to popout: ${type}`);
+        clearInterval(interval);
+      }
+    }, 300); // Try every 300ms
+  };
+
+  const handleEndCall = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      setHasStoppedRecording(true);
+      sendMessageToPopout("STOP_RECORDING");
+    }
+  };
+
+  // Listener for recordingURL
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.origin !== window.location.origin) return;
+
+      if (event.data?.type === "RECORDING_UPLOADED") {
+        const { recordingUrl } = event.data.payload;
+        console.log("Recording URL received:", recordingUrl);
+        setRecordingURL(recordingUrl);
+      }
+    };
+
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
+
   return (
     <div className='px-12 py-6'>
       <div className='flex justify-between items-center gap-3'>
@@ -117,14 +181,19 @@ function StartInterview({params}) {
           {/* <h2 className='text-xs pt-1 text-gray-400'>{interviewData?.quesType}</h2> */}
         </div>
         <div>
-          {(recordingStatus || hasStoppedRecording) && (
+          {recordingStatus && (
             <Button
-              className='bg-[#310444] hover:bg-[#9C02CE] mr-8'
+              className={`bg-[#310444] hover:bg-[#9C02CE] mr-8`}
               onClick={toggleRecordingStatus}
               disabled={hasStoppedRecording}
             >
-              <Pause className="mr-2" />
-              Stop Recording
+              {isRecording ? (
+                <><Pause className="mr-2" />
+                  Stop Recording</>
+              ) : (
+                <><Play className="mr-2" />
+                  Start Recording</>
+              )}
             </Button>
           )}
         </div>
@@ -141,7 +210,8 @@ function StartInterview({params}) {
         webcamRef={webcamRef}
         interviewData={interviewData}
         params={params}
-        recordingStatus={recordingStatus}
+        onEndCall={handleEndCall}
+        recordingURL={recordingURL}
         />
       ) : (
         // Default Mode
@@ -161,7 +231,9 @@ function StartInterview({params}) {
           </div>
         </div>
       )}
-
+      {/* {mediaBlobUrl && (
+        <video src={mediaBlobUrl} controls autoPlay style={{ maxWidth: "100%" }} />
+      )} */}
     </div>
     
   )

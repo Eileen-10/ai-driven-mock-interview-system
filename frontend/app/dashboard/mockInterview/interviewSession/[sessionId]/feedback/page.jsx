@@ -20,6 +20,7 @@ function Feedback({params}) {
   const [feedbackList, setFeedbackList] = useState([])
   const [sessionFeedbackData, setSessionFeedbackData] = useState()
   const [dialog, setDialog] = useState([])
+  const [recordingURL, setRecordingURL] = useState(null);
   const [openStates, setOpenStates] = useState({})
   const router = useRouter()
 
@@ -50,6 +51,10 @@ function Feedback({params}) {
     if (dialogData[0]?.dialog) {
       const parsedDialog = JSON.parse(dialogData[0].dialog); // clean parse
       setDialog(parsedDialog);
+    }
+
+    if (dialogData[0].recordingURL) {
+      setRecordingURL(dialogData[0].recordingURL); // Save recording URL
     }
   }
   
@@ -126,7 +131,17 @@ function Feedback({params}) {
               <Calendar className='w-3.5 h-3.5 mr-1'/>{sessionData?.createdAt}
             </h2>
           </div>
-          <Button className='rounded-xl bg-black p-5 hover:bg-[#FF8C00]'>View Recording</Button>
+          {recordingURL && (
+            <a
+              href={recordingURL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button className="rounded-xl bg-black p-5 hover:bg-[#FF8C00]">
+                View Recording
+              </Button>
+            </a>
+          )}
         </div>
         <div className='grid grid-cols-[auto_1fr] gap-y-1 mx-2 w-fit mt-3'>
           <h2 className='text-sm font-semibold'>Job Description</h2>

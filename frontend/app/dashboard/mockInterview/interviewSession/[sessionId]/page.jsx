@@ -226,8 +226,19 @@ function InterviewSession({params}) {
             } else {
                 localStorage.removeItem("selectedCamera") // Remove if only mic is used
             }
+            
+            // if (recordingEnabled) {
+            //     // Open new tab for the start session
+            //     const newTab = window.open('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
+            //     if (!newTab) {
+            //         alert("Popup blocked. Please allow popups for this site.");
+            //         return;
+            //     }
 
-            router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
+            // } else {
+                router.push('/dashboard/mockInterview/interviewSession/'+params.sessionId+'/start');
+            // }
+
         }
         
         // Else, try requesting for mic permission

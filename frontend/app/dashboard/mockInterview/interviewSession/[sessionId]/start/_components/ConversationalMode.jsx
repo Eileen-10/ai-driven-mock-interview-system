@@ -22,6 +22,7 @@ const CallStatus = {
     CONNECTING: "CONNECTING",
     ACTIVE: "ACTIVE",
     FINISHED: "FINISHED",
+    GENERATING_FEEDBACK: "GENERATING_FEEDBACK",
 };
 
 const supabase = createClient(
@@ -29,7 +30,7 @@ const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_KEY
 )
 
-function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params, recordingStatus}) {
+function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedCamera, selectedMicrophone, setSelectedMicrophone, webcamRef, interviewData, params, onEndCall, recordingURL}) {
     const {user} = useUser()
     const router=useRouter()
     const [AIisSpeaking, setAIisSpeaking] = useState(false)
@@ -43,6 +44,12 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
     const [isSettingsOpen, setIsSettingsOpen] = useState(false)   // Cam & Mic setting
     const isCameraOn = Boolean(selectedCamera);                   // Toggle to on/off camera
     const [isCaptionOn, setIsCaptionOn] = useState(true);         // Toggle to show/hide caption
+    const recordingUrlRef = useRef(recordingURL);
+    const [callEnded, setCallEnded] = useState(false);
+
+    useEffect(() => {
+      recordingUrlRef.current = recordingURL;
+    }, [recordingURL]);
 
     useEffect(() => {
       console.log("All messages:", messages);
@@ -140,27 +147,62 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
     const handleDisconnect = async() => {
         setCallStatus(CallStatus.FINISHED);
         vapi.stop();
+        onEndCall();  // End Recording
+        setCallEnded(true); // mark call ended
 
-        // Save dialog to db
-        if(messages){
-          const resp=await db.insert(UserAnswerConversational)
-          .values({
-            mockIDRef:interviewData?.mockID,
-            dialog:JSON.stringify(messages),
-            // audioURL:videoUrl ? videoUrl : null,
-            createdBy:user?.primaryEmailAddress?.emailAddress,
-            createdAt:moment().format('DD-MM-yyyy')
-          })
-          if(resp){
-            console.log("Dialog saved successfully")
-          }
-        }
+        setCallStatus(CallStatus.GENERATING_FEEDBACK);
 
-        // Generate & store session feedback
-        await generateSessionFeedback();
+        // console.log("URL before saving to db: ", recordingUrlRef.current)
 
-        router.push('/dashboard/mockInterview/interviewSession/'+interviewData?.mockID+'/feedback')
+        // // Save dialog to db
+        // if(messages){
+        //   const resp=await db.insert(UserAnswerConversational)
+        //   .values({
+        //     mockIDRef:interviewData?.mockID,
+        //     dialog:JSON.stringify(messages),
+        //     // audioURL:videoUrl ? videoUrl : null,
+        //     createdBy:user?.primaryEmailAddress?.emailAddress,
+        //     createdAt:moment().format('DD-MM-yyyy')
+        //   })
+        //   if(resp){
+        //     console.log("Dialog saved successfully")
+        //   }
+        // }
+
+        // // Generate & store session feedback
+        // await generateSessionFeedback();
+
+        // router.push('/dashboard/mockInterview/interviewSession/'+interviewData?.mockID+'/feedback')
     };
+
+    // Listen for recordingURL updates after call ends
+    useEffect(() => {
+      if (callEnded && recordingUrlRef.current) {
+        // Save dialog and recording URL to db
+        (async () => {
+          console.log("Saving dialog with recording URL:", recordingUrlRef.current);
+          
+          if(messages){
+            const resp=await db.insert(UserAnswerConversational)
+              .values({
+                mockIDRef: interviewData?.mockID,
+                dialog: JSON.stringify(messages),
+                recordingURL: recordingUrlRef.current ? recordingUrlRef.current : null,
+                createdBy: user?.primaryEmailAddress?.emailAddress,
+                createdAt: moment().format('DD-MM-yyyy')
+              });
+            if(resp){
+              console.log("Dialog saved successfully");
+            }
+          }
+
+          // Generate & store session feedback
+          // await generateSessionFeedback();
+
+          router.push('/dashboard/mockInterview/interviewSession/' + interviewData?.mockID + '/feedback');
+        })();
+      }
+    }, [callEnded, recordingURL]);
 
     const generateSessionFeedback = async() => {     
       try {
@@ -419,20 +461,27 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
       </div>
           
       <div className="w-full flex justify-center">
-          {callStatus !== "ACTIVE" ? (
-          <button
+          {callStatus !== "ACTIVE" && callStatus !== "GENERATING_FEEDBACK" ? (
+            <button
               onClick={handleCall}
               className="px-6 py-2 mr-10 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-          >
+            >
               {callStatus === "CONNECTING" ? "Connecting..." : "Call"}
-          </button>
-          ) : (
-          <button
+            </button>
+          ) : callStatus === "ACTIVE" ? (
+            <button
               onClick={handleDisconnect}
               className="px-6 py-2 mr-10 bg-red-700 text-white rounded-lg hover:bg-red-800 transition"
-          >
+            >
               End
-          </button>
+            </button>
+          ) : (
+            <button
+              disabled
+              className="px-6 py-2 mr-10 bg-gray-500 text-white rounded-lg cursor-not-allowed"
+            >
+              Generating feedback...
+            </button>
           )}
       </div>
       
