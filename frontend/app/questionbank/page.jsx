@@ -86,7 +86,7 @@ function QuestionBankPage() {
 
       // Predict question type if 'not sure'
       if (newQuesType === "notsure") {
-        const predictionResp = await fetch("http://127.0.0.1:8000/predict-question-type", {
+        const predictionResp = await fetch("https://ai-driven-mock-interview-system.onrender.com/predict-question-type", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -104,7 +104,7 @@ function QuestionBankPage() {
 
       // Predict question category if 'not sure'
       if (newQuesCategory === "notsure") {
-        const categoryResp = await fetch("http://127.0.0.1:8000/predict-question-category", {
+        const categoryResp = await fetch("https://ai-driven-mock-interview-system.onrender.com/predict-question-category", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
