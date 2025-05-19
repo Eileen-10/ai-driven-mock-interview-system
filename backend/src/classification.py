@@ -22,7 +22,7 @@ category_model.load_state_dict(torch.load(os.path.join(MODEL_DIR, "category_clas
 category_model.eval()
 
 # Shared tokenizer
-tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+tokenizer = AutoTokenizer.from_pretrained("nreimers/MiniLM-L6-H384-uncased")
 
 def predict_question_type(question: str) -> str:
     tokens = tokenizer(question, return_tensors="pt", truncation=True, padding="max_length", max_length=128)
