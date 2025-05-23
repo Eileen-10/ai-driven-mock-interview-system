@@ -159,7 +159,7 @@ function QuestionBankPage() {
     console.log(selectedQuestions)
     try {
       // Generate suggested answer for each ques
-      const response = await fetch("http://localhost:8000/generate-suggested-answers/", {
+      const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/generate-suggested-answers/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
