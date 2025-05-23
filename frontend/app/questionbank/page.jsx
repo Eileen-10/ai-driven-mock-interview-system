@@ -86,7 +86,7 @@ function QuestionBankPage() {
 
       // Predict question type if 'not sure'
       if (newQuesType === "notsure") {
-        const predictionResp = await fetch("https://mockview-460317.as.r.appspot.com/predict-question-type", {
+        const predictionResp = await fetch("https://mockview-460317.as.r.appspot.com/predict-question-type/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -104,7 +104,7 @@ function QuestionBankPage() {
 
       // Predict question category if 'not sure'
       if (newQuesCategory === "notsure") {
-        const categoryResp = await fetch("https://mockview-460317.as.r.appspot.com/predict-question-category", {
+        const categoryResp = await fetch("https://mockview-460317.as.r.appspot.com/predict-question-category/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

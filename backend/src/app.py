@@ -15,7 +15,7 @@ app = FastAPI()
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://ai-driven-mock-interview-system-awwo.vercel.app"],  # Allow requests from Next.js frontend
+    allow_origins=["http://localhost:3000", "https://ai-driven-mock-interview-system-awwo.vercel.app", "https://mockview-460317.as.r.appspot.com"],  # Allow requests from Next.js frontend
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
