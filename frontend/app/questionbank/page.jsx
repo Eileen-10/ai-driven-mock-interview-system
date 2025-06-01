@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Info, LoaderCircle } from 'lucide-react';
+import { CircleX, CopyX, Info, LoaderCircle, PencilLine, Sparkles, SquareCheckBig, SquareDashedMousePointer, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import moment from 'moment'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -17,6 +17,12 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { v4 as uuidv4 } from 'uuid'
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_KEY
+)
 
 function QuestionBankPage() {
   const {user} = useUser()
@@ -47,6 +53,18 @@ function QuestionBankPage() {
   const [sessionLoading, setSessionLoading] = useState(false)
   const [jsonResponse, setJsonResponse] = useState([]); // Selected ques & suggested ans pair
 
+  // Recommendation
+  const [openRecommendationPrompt, setOpenRecommendationPrompt] = useState(false) // Recommendation input prompt
+  const [recommendationJobRole, setRecommendationJobRole] = useState('');  // job role for recommendation
+  const [recommendationJobDesc, setRecommendationJobDesc] = useState('');  // job desc for recommendation
+  const [numOfQues, setNumOfQues] = useState(5);            // Number of recommendation
+  const [supportDoc, setSupportDoc] = useState(null);       // Supporting Document
+  const [docMode, setDocMode] = useState(null); // supportDoc: Select existing/ Upload new/ None
+  const [fileList, setFileList] = useState([]); // Uploaded supportDocs list from supabase
+  const [selectedDocId, setSelectedDocId] = useState(null); // Selected doc from uploaded doc list
+  const [saveToSupportDocsCenter, setSaveToSupportDocsCenter] = useState(false); // Option to save to supabase if upload new doc
+  const [recommendedQuestions, setRecommendedQuestions] = useState([]);
+
   useEffect(() => {
     user && getQuestionList()
   },[user])
@@ -60,7 +78,7 @@ function QuestionBankPage() {
   }
 
   // Filtered questions (text search, quesType)
-  const filteredQuestions = questionList.filter((question) => {
+  const filteredQuestions = (recommendedQuestions.length > 0 ? recommendedQuestions : questionList).filter((question) => {
     const matchesSearch = question.question.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesType = quesTypeFilter === 'allType' || quesTypeFilter === '' ? true : question.quesType === quesTypeFilter
     const matchesCategory = categoryFilter === 'allCategory' || categoryFilter === '' ? true : question.category === categoryFilter
@@ -211,62 +229,325 @@ function QuestionBankPage() {
     }
   };
 
+  const handleFileChange = (event) => {
+      setSupportDoc(event.target.files[0]); // Set the actual file
+  };
+
+  useEffect(() => {
+    const fetchUserFiles = async () => {
+      if (!user) return;
+
+      const { data, error } = await supabase
+      .from('supportDocs')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+      if (error) {
+      console.error('Error fetching metadata:', error);
+      return;
+      }
+
+      const filesWithUrls = data.map(file => ({
+      id: file.id.toString(),
+      name: file.file_name,
+      url: file.public_url,
+      updatedAt: new Date(file.created_at).toLocaleString(),
+      isDefault: file.is_default
+      }));
+
+      setFileList(filesWithUrls);
+      const defaultDoc = filesWithUrls.find(f => f.isDefault);
+      if (defaultDoc) {
+      setSelectedDocId(defaultDoc.id);
+      }
+    }
+
+    if (docMode === 'existing') {
+      fetchUserFiles();
+    }
+  }, [docMode, user]);
+
+  useEffect(() => {
+    if (docMode === null) {
+      setSupportDoc(null);
+      setSelectedDocId(null);
+    }
+  }, [docMode]);
+
+  const fileUpload = async (mockID) => {
+    try {
+      if (!supportDoc || !user) return null;
+
+      const originalFileName = supportDoc.name;
+      const fileExt = supportDoc.name.split('.').pop();
+
+      // 1. Check for existing file with same name
+      const { data: existingFiles, error: checkError } = await supabase
+      .from('supportDocs')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('file_name', originalFileName);
+
+      if (checkError) {
+      console.error("Error checking for existing file:", checkError);
+      return null;
+      }
+
+      if (existingFiles.length > 0) {
+      alert("You have already uploaded a file with the same name. Please rename the file or choose another if you want to save it into existing list.");
+      return null;
+      }
+
+      // 2. Check if user already has a default file
+      const { data: defaultCheck } = await supabase
+      .from("supportDocs")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("is_default", true);
+
+      const isDefault = defaultCheck.length === 0;
+
+      // 3. Create unique file name and path
+      const uniqueSuffix = Date.now();
+      const uniqueFileName = `${uniqueSuffix}.${fileExt}`;
+      const filePath = `support_docs/${user.id}/${uniqueFileName}`;
+
+      const { error: uploadError } = await supabase.storage
+      .from("mock-iv-sessions")
+      .upload(filePath, supportDoc, {
+          cacheControl: "3600",
+          upsert: false,
+      });
+
+      if (uploadError) {
+      console.error("Upload error:", uploadError);
+      return null;
+      }
+
+      const { data: { publicUrl } } = supabase
+      .storage
+      .from("mock-iv-sessions")
+      .getPublicUrl(filePath);
+
+      // 4. Insert metadata into supportDocs table
+      const { error: dbError } = await supabase
+      .from("supportDocs")
+      .insert([{
+          user_id: user.id,
+          file_name: originalFileName,
+          file_path: filePath,
+          public_url: publicUrl,
+          is_default: isDefault,
+      }]);
+
+      if (dbError) {
+      console.error("Error inserting into supportDocs:", dbError);
+      return null;
+      }
+
+      return publicUrl;
+
+    } catch (error) {
+      console.error("Error in fileUpload:", error.message);
+      return null;
+    }
+  }
+
+  const onRecommendationSubmit=async(e)=>{
+    setLoading(true)
+    e.preventDefault()
+    
+    const formData = new FormData();
+    formData.append("job_role", recommendationJobRole);
+    formData.append("job_desc", recommendationJobDesc);
+    formData.append("top_k", numOfQues);
+    try {
+        let file = null;
+        let fileUrl = null;
+        
+        // If user selected existing document from dropdown
+        if (docMode === 'existing' && selectedDocId) {
+            const selectedFile = fileList.find(file => file.id === selectedDocId);
+            if (selectedFile) {
+                const response = await fetch(selectedFile.url);
+                const blob = await response.blob();
+                file = new File([blob], selectedFile.name, { type: 'application/pdf' });
+                setSupportDoc(file); // update local state if needed
+                formData.append("support_doc", file);
+                fileUrl = selectedFile.url;
+            }
+        }
+
+        // If user uploaded a new file
+        let uploadedUrl = null;
+        if (docMode === 'upload' && supportDoc) {
+            formData.append("support_doc", supportDoc);
+
+            // Upload to Supabase if requested
+            if (saveToSupportDocsCenter) {
+                uploadedUrl = await fileUpload(mockID)
+                if (!uploadedUrl) {
+                    setLoading(false); // Prevent session start if upload failed
+                    return;
+                }
+                fileUrl = uploadedUrl;
+            }
+        }
+
+        console.log(recommendationJobRole, recommendationJobDesc, numOfQues, supportDoc)
+
+        // Call backend to return recommended question from question bank
+        const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/recommend-questions/", {
+            method: "POST",
+            body: formData,
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log(data)
+        setRecommendedQuestions(data.recommended);
+
+    } catch (error) {
+        console.error("Error generating recommended questions:", error);
+    }
+    setLoading(false);
+    setOpenRecommendationPrompt(false);
+    setRecommendationJobRole('');
+    setRecommendationJobDesc('');
+    setNumOfQues(5);
+  }
+
   return (
     <div className='px-12 py-8'>
       <h2 className='font-bold text-xl'>Question Bank</h2>
       <h2 className='text-sm italic pt-1 text-gray-500'>Search, filter, and explore questions to prepare for every interview scenario. 🔍</h2>
       {/* == Filter == */}
-      <div className='flex flex-col md:flex-row gap-4 my-5'>
-        <Input
-          placeholder='Search questions...'
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className='md:w-1/2'
-        />
-        <Select onValueChange={(value) => setQuesTypeFilter(value)} value={quesTypeFilter}>
-          <SelectTrigger className='md:w-1/2'>
-            <SelectValue placeholder='Question Type' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='allType'>All Question Types</SelectItem>
-            <SelectItem value='technical'>Technical</SelectItem>
-            <SelectItem value='behavioral'>Behavioral</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select onValueChange={(value) => setCategoryFilter(value)} value={categoryFilter}>
-          <SelectTrigger className='md:w-1/2'>
-            <SelectValue placeholder='Category' />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value='allCategory'>All Categories</SelectItem>
-            <SelectItem value="general">General</SelectItem>
-            <SelectItem value="healthcare">Healthcare</SelectItem>
-            <SelectItem value="engineering & it">Engineering & IT</SelectItem>
-            <SelectItem value="business & finance">Business & Finance</SelectItem>
-            <SelectItem value="public safety">Public Safety</SelectItem>
-            <SelectItem value="customer service">Customer Service</SelectItem>
-            <SelectItem value="education & literacy">Education & Literacy</SelectItem>
-            <SelectItem value="social services">Social Services</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={()=>setOpenPrompt(true)}>+ New Question</Button>
-        {selectedQuestions.length !== 0 && (<Button 
-        className='bg-[#9C02CE] hover:bg-[#9C02CE]/80'
-        onClick={()=>setOpenSessionPrompt(true)}>
-          Generate Custom Session</Button>)}
+      <div className="flex flex-col gap-4 my-5">
+        <div className='flex flex-col md:flex-row gap-4'>
+          <Input
+            placeholder='Search questions...'
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className='md:w-1/2'
+          />
+          <Select onValueChange={(value) => setQuesTypeFilter(value)} value={quesTypeFilter}>
+            <SelectTrigger className='md:w-1/2'>
+              <SelectValue placeholder='Question Type' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='allType'>All Question Types</SelectItem>
+              <SelectItem value='technical'>Technical</SelectItem>
+              <SelectItem value='behavioral'>Behavioral</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select onValueChange={(value) => setCategoryFilter(value)} value={categoryFilter}>
+            <SelectTrigger className='md:w-1/2'>
+              <SelectValue placeholder='Category' />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value='allCategory'>All Categories</SelectItem>
+              <SelectItem value="general">General</SelectItem>
+              <SelectItem value="healthcare">Healthcare</SelectItem>
+              <SelectItem value="engineering & it">Engineering & IT</SelectItem>
+              <SelectItem value="business & finance">Business & Finance</SelectItem>
+              <SelectItem value="public safety">Public Safety</SelectItem>
+              <SelectItem value="customer service">Customer Service</SelectItem>
+              <SelectItem value="education & literacy">Education & Literacy</SelectItem>
+              <SelectItem value="social services">Social Services</SelectItem>
+            </SelectContent>
+          </Select>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-gray-100 hover:bg-black hover:text-white"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setQuesTypeFilter("allType");
+                    setCategoryFilter("allCategory");
+                  }}
+                >
+                  <Trash2 />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className='bg-gray-500'>
+                  <p>Reset Filters</p>
+              </TooltipContent>
+              </Tooltip>
+          </TooltipProvider>
+          <Button onClick={()=>setOpenPrompt(true)}>+ New Question</Button>
+        </div>
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Button className='bg-[#FF8C00] hover:bg-[#FF8C00]/80' onClick={()=>setOpenRecommendationPrompt(true)}><Sparkles />Recommend Me</Button>
+          {recommendedQuestions.length > 0 && (
+            <Button onClick={() => setRecommendedQuestions([])}><CircleX />Clear Recommendations</Button>
+          )}
+          {selectedQuestions.length !== 0 && (
+            <div className="flex items-center gap-4">
+              <Button 
+                className='bg-[#9C02CE] hover:bg-[#9C02CE]/80'
+                onClick={()=>setOpenSessionPrompt(true)}>
+                <PencilLine />Generate Custom Session
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                {selectedQuestions.length} question{selectedQuestions.length > 1 ? 's' : ''} selected
+              </p>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-gray-100 hover:bg-black hover:text-white"
+                      onClick={() => setSelectedQuestions([])}
+                    >
+                      <CopyX />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className='bg-gray-500'>
+                      <p>Unselect All Questions</p>
+                  </TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+            </div>
+          )}
+          <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-gray-100 hover:bg-black hover:text-white"
+                      onClick={() => {
+                        const allIds = currentPageQuestions.map((q) => q.id);
+                        setSelectedQuestions(prev => [...new Set([...prev, ...allIds])]);
+                      }}
+                    >
+                      <SquareCheckBig />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className='bg-gray-500'>
+                      <p>Select All Questions on Current Page</p>
+                  </TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+        </div>
       </div>
       {/* == Question Listing == */}
       <div className='grid grid-cols-1 gap-5'>
         {currentPageQuestions && currentPageQuestions.map((question, index) =>(
             <QuestionItemCard 
             question={question}
-            key={index}
-            isSelected={selectedQuestions.includes(question.question)}
+            key={question.id}
+            isSelected={selectedQuestions.includes(question.id)}
             onSelect={(checked) => {
               if (checked) {
-                setSelectedQuestions([...selectedQuestions, question.question]);
+                setSelectedQuestions(prev => [...prev, question.id]);
               } else {
-                setSelectedQuestions(selectedQuestions.filter(q => q !== question.question));
+                setSelectedQuestions(prev => prev.filter(id => id !== question.id));
               }
             }}
             />
@@ -430,13 +711,33 @@ function QuestionBankPage() {
       </Dialog>
       {/* == Generate Custom Session Prompt == */}
       <Dialog open={openSessionPrompt}>
-          <DialogContent className="max-w-xl [&>button]:hidden">
+          <DialogContent className="max-w-3xl [&>button]:hidden">
               <DialogHeader>
-                  <DialogTitle className='text-xl'>Additional details for this interview session</DialogTitle>
+                  <DialogTitle className='text-xl'>Custom Interview Session Details</DialogTitle>
                   <DialogDescription>
+                      <h2 className='italic'>Fields marked with <span className="text-red-500">*</span> are required.</h2>
+                      
+                      {/* === Selected Questions Preview === */}
+                      <div className="max-h-40 overflow-y-auto my-4 p-3 border rounded-xl bg-[#05060B] text-white">
+                        <h3 className="font-bold mb-2">Selected Questions:</h3>
+                        {selectedQuestions.length > 0 ? (
+                          <ol className="list-decimal list-inside text-sm">
+                            {selectedQuestions.map((id, idx) => {
+                              const questionObj = questionList.find(q => q.id === id);
+                              return (
+                                <li key={idx} className='mb-1'>
+                                  {questionObj?.question || <span className="italic text-muted-foreground">[Question not found]</span>}
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        ) : (
+                          <p className="italic text-sm text-muted-foreground">No questions selected.</p>
+                        )}
+                      </div>
+        
                       <form onSubmit={onSessionSubmit}>
                       <div>
-                          <h2 className='italic'>Fields marked with <span className="text-red-500">*</span> are required.</h2>
                           <div className='flex items-center mt-5 my-3 gap-1'>
                               <Label className="text-black font-bold">Interview Mode <span className="text-red-500">*</span></Label>
                               <TooltipProvider>
@@ -529,6 +830,101 @@ function QuestionBankPage() {
                               <>
                               <LoaderCircle className='animate-spin'/>Starting session..
                               </>:'Launch'
+                              }
+                          </Button>
+                      </div>
+                      </form>
+                  </DialogDescription>
+              </DialogHeader>
+          </DialogContent>
+      </Dialog>
+      {/* == Recommendation Prompt == */}
+      <Dialog open={openRecommendationPrompt}>
+          <DialogContent className="max-w-xl [&>button]:hidden">
+              <DialogHeader>
+                  <DialogTitle className='text-xl'>Provide details for recommended interview questions</DialogTitle>
+                  <DialogDescription>
+                      <form onSubmit={onRecommendationSubmit}>
+                      <div>
+                          <h2 className='italic'>Fields marked with <span className="text-red-500">*</span> are required.</h2>
+                          <div className='mt-5 my-3'>
+                              <label className="text-black font-bold">Job Role/Position <span className="text-red-500">*</span></label>
+                              <Input className="bg-gray-100 p-2 rounded-md" placeholder="e.g. Frontend Developer" required
+                              onChange={(event)=>setRecommendationJobRole(event.target.value)}/>
+                          </div>
+                          <div className='my-3'>
+                              <label className="text-black font-bold">Job Description <span className="text-red-500">*</span></label>
+                              <Textarea className="bg-gray-100 p-2 rounded-md" placeholder="e.g. Responsible for building user interfaces using React and TypeScript..." required
+                                onChange={(event)=>setRecommendationJobDesc(event.target.value)}/>
+                          </div>
+                          <div className='my-3'>
+                              <label className="text-black font-bold">Number of Questions</label>
+                              <Input className="bg-gray-100 p-2 rounded-md" placeholder="Default: 5"
+                              onChange={(event)=>setNumOfQues(event.target.value)}/>
+                          </div>
+                          {/* Supporting Document */}
+                          <div className='mb-3 mt-5'>
+                              <label className="text-black font-bold">Supporting Document (Optional)</label>
+                              <div className='text-xs mt-1 italic'>e.g. Resume, CV, Cover Letter, ..</div>
+                              <div className='text-xs mt-1 italic'>** PDF format ONLY</div>
+                              <div className='flex gap-3 mt-2'>
+                                  <Button
+                                      type="button"
+                                      onClick={() => setDocMode(prev => prev === 'existing' ? null : 'existing')}
+                                      className={`border ${docMode === 'existing' ? 'bg-black text-white hover:bg-black' : 'bg-white text-black hover:bg-gray-600 hover:text-white'}`}
+                                  >
+                                      Select from existing document
+                                  </Button>
+                                  <Button
+                                      type="button"
+                                      onClick={() => setDocMode(prev => prev === 'upload' ? null : 'upload')}
+                                      className={`border ${docMode === 'upload' ? 'bg-black text-white hover:bg-black' : 'bg-white text-black hover:bg-gray-600 hover:text-white'}`}
+                                  >
+                                      Upload new document
+                                  </Button>
+                              </div>
+                              {docMode === 'existing' && (
+                                  <div className="my-2">
+                                  {fileList.length > 0 ? (
+                                      <Select
+                                      value={selectedDocId || ''}
+                                      onValueChange={(val) => setSelectedDocId(val)}
+                                      >
+                                      <SelectTrigger className="w-full bg-gray-100 p-2 rounded-md">
+                                          <SelectValue placeholder="Choose a document" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                          {fileList.map((file) => (
+                                          <SelectItem key={file.id} value={file.id}>
+                                              {file.name} {file.isDefault ? '(Default)' : ''}
+                                          </SelectItem>
+                                          ))}
+                                      </SelectContent>
+                                      </Select>
+                                  ) : (
+                                      <p className="text-sm text-gray-500 italic mt-2">No documents found.</p>
+                                  )}
+                                  </div>
+                              )}
+                              {docMode === 'upload' && (
+                                  <div className="grid w-full max-w-sm items-center gap-1.5 my-2">
+                                      <Input id="supportDoc" type="file" accept="application/pdf" className="bg-gray-100 p-2 rounded-md" 
+                                      onChange={handleFileChange}/>
+                                      <div className="flex items-center gap-2 mt-2">
+                                          <Switch id="saveToCenter" checked={saveToSupportDocsCenter} onCheckedChange={setSaveToSupportDocsCenter} />
+                                          <Label htmlFor="saveToCenter" className="text-sm">Save to existing document list</Label>
+                                      </div>
+                                  </div>
+                              )}
+                          </div>
+                      </div>
+                      <div className='flex gap-5 justify-center'>
+                          <Button type="button" variant="outline" onClick={()=>setOpenRecommendationPrompt(false)}>Cancel</Button>
+                          <Button type="submit" disabled={loading}>
+                              {loading?
+                              <>
+                              <LoaderCircle className='animate-spin'/>Searching questions..
+                              </>:'Submit'
                               }
                           </Button>
                       </div>

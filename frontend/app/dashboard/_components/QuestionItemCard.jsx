@@ -10,7 +10,7 @@ function QuestionItemCard({question, isSelected, onSelect}) {
             <h2 className='font-bold'>{question?.question}</h2>
             <div className='flex flex-wrap gap-2 mt-3'>
                 <Badge variant="outline" className="bg-[#9C02CE] text-white">
-                {question?.quesType.charAt(0).toUpperCase() + question?.quesType.slice(1)}
+                {question?.quesType?.charAt(0).toUpperCase() + question?.quesType?.slice(1)}
                 </Badge>
                 <Badge variant="outline" className="bg-[#FF8C00] text-white">
                 {question?.category.replace(/\b\w/g, (char) => char.toUpperCase())}
