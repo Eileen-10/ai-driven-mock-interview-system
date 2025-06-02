@@ -4,18 +4,21 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
-import src.model.download_models
+# import src.model.download_models
 from src.OCR import extract_text_from_pdf   # Import OCR function
 from src.LLM import generate_interview_questions, generate_feedback, generate_session_feedback, generate_interview_answers # Import LLM function
 from src.similarity import compute_cosine_similarity
-from src.classification import predict_question_type, predict_question_category
+# from src.classification import predict_question_type, predict_question_category
+# from src.recommendation import recommend_questions
+from fastapi import Body
+# import math
 
 app = FastAPI()
 
 # Enable CORS for frontend communication
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # Allow requests from Next.js frontend
+    allow_origins=["http://localhost:3000", "https://ai-driven-mock-interview-system-awwo.vercel.app", "https://mockview-460317.as.r.appspot.com"],  # Allow requests from Next.js frontend
     allow_credentials=True,
     allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
@@ -102,16 +105,55 @@ async def evaluate_session(request: SessionFeedbackRequest):
     return JSONResponse(content={"session_feedback": session_feedback}, status_code=200)
 
 
-# == Classification for new ques type ==
-class QuestionInput(BaseModel):
-    question: str
+# # == Classification for new ques type ==
+# class QuestionInput(BaseModel):
+#     question: str
 
-@app.post("/predict-question-type/")
-def classify_type(data: QuestionInput):
-    label = predict_question_type(data.question)
-    return {"predicted_type": label}
+# @app.post("/predict-question-type/")
+# def classify_type(data: QuestionInput):
+#     label = predict_question_type(data.question)
+#     return {"predicted_type": label}
 
-@app.post("/predict-question-category/")
-async def predict_category(payload: QuestionInput):
-    category = predict_question_category(payload.question)
-    return {"predicted_category": category}
+# @app.post("/predict-question-category/")
+# async def predict_category(payload: QuestionInput):
+#     category = predict_question_category(payload.question)
+#     return {"predicted_category": category}
+
+# # == Ques Recommendation frm QB ==
+# @app.post("/recommend-questions/")
+# async def recommend_questions_api(
+#     job_role: str = Form(...),
+#     job_desc: str = Form(...),
+#     support_doc: UploadFile = File(None),
+#     top_k: int = Form(5)
+# ):
+#     """
+#     Recommend similar questions based on job role, job description,
+#     and optional supporting document (PDF).
+#     """
+#     doc_text = ""
+
+#     # Process PDF if uploaded
+#     if support_doc:
+#         pdf_path = f"temp_{support_doc.filename}"
+#         with open(pdf_path, "wb") as buffer:
+#             buffer.write(await support_doc.read())
+#         doc_text = extract_text_from_pdf(pdf_path)
+#         os.remove(pdf_path)
+
+#     # Combine all input text into one string for embedding
+#     combined_text = f"{job_role} {job_desc} {doc_text}"
+
+#     # Get recommendations
+#     results = recommend_questions(combined_text, top_k=top_k)
+
+#     # Clean out any NaN values to avoid JSON errors
+#     cleaned_results = []
+#     for item in results:
+#         cleaned_item = {
+#             k: (None if isinstance(v, float) and math.isnan(v) else v)
+#             for k, v in item.items()
+#         }
+#         cleaned_results.append(cleaned_item)
+
+#     return JSONResponse(content={"recommended": cleaned_results}, status_code=200)

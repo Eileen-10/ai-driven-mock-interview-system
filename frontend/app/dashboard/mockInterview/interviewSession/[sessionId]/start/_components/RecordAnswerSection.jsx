@@ -143,7 +143,7 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
     // Call for LLM & similarity from FastAPI
     // To calculate Similarity Score & generate Rating + Feedback
     try {
-      const response = await fetch("http://127.0.0.1:8000/evaluate-answer", {
+      const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/evaluate-answer", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
