@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CircleX, CopyX, Info, LoaderCircle, PencilLine, Sparkles, SquareCheckBig, SquareDashedMousePointer, Trash2 } from 'lucide-react';
+import { CircleX, CopyX, Info, ListChecks, ListTodo, LoaderCircle, PencilLine, Sparkles, SquareCheckBig, SquareDashedMousePointer, Trash2 } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import moment from 'moment'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -64,6 +64,7 @@ function QuestionBankPage() {
   const [selectedDocId, setSelectedDocId] = useState(null); // Selected doc from uploaded doc list
   const [saveToSupportDocsCenter, setSaveToSupportDocsCenter] = useState(false); // Option to save to supabase if upload new doc
   const [recommendedQuestions, setRecommendedQuestions] = useState([]);
+  const [viewSelectedOnly, setViewSelectedOnly] = useState(false);
 
   useEffect(() => {
     user && getQuestionList()
@@ -398,7 +399,7 @@ function QuestionBankPage() {
         console.log(recommendationJobRole, recommendationJobDesc, numOfQues, supportDoc)
 
         // Call backend to return recommended question from question bank
-        const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/recommend-questions/", {
+        const response = await fetch("https://mockview-460317.as.r.appspot.com/recommend-questions/", {
             method: "POST",
             body: formData,
         });
@@ -503,6 +504,22 @@ function QuestionBankPage() {
                     <Button
                       variant="outline"
                       className="bg-gray-100 hover:bg-black hover:text-white"
+                      onClick={() => setViewSelectedOnly(prev => !prev)}
+                    >
+                      {viewSelectedOnly ? <ListTodo /> : <ListChecks />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className='bg-gray-500'>
+                      <p>{viewSelectedOnly ? "Show All Questions" : "View Selected Questions Only"}</p>
+                  </TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="bg-gray-100 hover:bg-black hover:text-white"
                       onClick={() => setSelectedQuestions([])}
                     >
                       <CopyX />
@@ -538,7 +555,10 @@ function QuestionBankPage() {
       </div>
       {/* == Question Listing == */}
       <div className='grid grid-cols-1 gap-5'>
-        {currentPageQuestions && currentPageQuestions.map((question, index) =>(
+        {(viewSelectedOnly 
+          ? currentPageQuestions.filter(q => selectedQuestions.includes(q.id))
+          : currentPageQuestions
+        ).map((question, index) => (
             <QuestionItemCard 
             question={question}
             key={question.id}
