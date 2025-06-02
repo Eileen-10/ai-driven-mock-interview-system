@@ -86,14 +86,20 @@ function QuestionBankPage() {
     return matchesSearch && matchesType && matchesCategory
   })
 
-  const totalPages = Math.ceil(filteredQuestions.length / questionsPerPage)
+  const selectedQuestionObjects = selectedQuestions
+    .map((id) => questionList.find((q) => q.id === id))
+    .filter((q) => !!q);
+
+  const paginatedSource = viewSelectedOnly ? selectedQuestionObjects : filteredQuestions;
+
+  const totalPages = Math.ceil(paginatedSource.length / questionsPerPage)
   const startIndex = (currentPage - 1) * questionsPerPage
   const endIndex = startIndex + questionsPerPage
-  const currentPageQuestions = filteredQuestions.slice(startIndex, endIndex)
+  const currentPageQuestions = paginatedSource.slice(startIndex, endIndex)
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, quesTypeFilter, categoryFilter])
+  }, [searchTerm, quesTypeFilter, categoryFilter, viewSelectedOnly])
 
   const onSubmit=async(e)=>{
     e.preventDefault()
@@ -504,22 +510,6 @@ function QuestionBankPage() {
                     <Button
                       variant="outline"
                       className="bg-gray-100 hover:bg-black hover:text-white"
-                      onClick={() => setViewSelectedOnly(prev => !prev)}
-                    >
-                      {viewSelectedOnly ? <ListTodo /> : <ListChecks />}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className='bg-gray-500'>
-                      <p>{viewSelectedOnly ? "Show All Questions" : "View Selected Questions Only"}</p>
-                  </TooltipContent>
-                  </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="bg-gray-100 hover:bg-black hover:text-white"
                       onClick={() => setSelectedQuestions([])}
                     >
                       <CopyX />
@@ -533,32 +523,51 @@ function QuestionBankPage() {
             </div>
           )}
           <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="bg-gray-100 hover:bg-black hover:text-white"
-                      onClick={() => {
-                        const allIds = currentPageQuestions.map((q) => q.id);
-                        setSelectedQuestions(prev => [...new Set([...prev, ...allIds])]);
-                      }}
-                    >
-                      <SquareCheckBig />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className='bg-gray-500'>
-                      <p>Select All Questions on Current Page</p>
-                  </TooltipContent>
-                  </Tooltip>
-              </TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-gray-100 hover:bg-black hover:text-white"
+                  onClick={() => {
+                    const allIds = currentPageQuestions.map((q) => q.id);
+                    setSelectedQuestions(prev => [...new Set([...prev, ...allIds])]);
+                  }}
+                >
+                  <SquareCheckBig />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className='bg-gray-500'>
+                  <p>Select All Questions on Current Page</p>
+              </TooltipContent>
+              </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-gray-100 hover:bg-black hover:text-white"
+                  onClick={() => setViewSelectedOnly(prev => !prev)}
+                >
+                  {viewSelectedOnly ? <ListTodo /> : <ListChecks />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className='bg-gray-500'>
+                  <p>{viewSelectedOnly ? "Show All Questions" : "View Selected Questions Only"}</p>
+              </TooltipContent>
+              </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
       {/* == Question Listing == */}
       <div className='grid grid-cols-1 gap-5'>
         {(viewSelectedOnly 
-          ? currentPageQuestions.filter(q => selectedQuestions.includes(q.id))
+          ? selectedQuestions
+            .map((id) => questionList.find((q) => q.id === id))
+            .filter(q => !!q)
+            .slice(startIndex, endIndex)
           : currentPageQuestions
-        ).map((question, index) => (
+        ).map((question) => (
             <QuestionItemCard 
             question={question}
             key={question.id}
