@@ -155,7 +155,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
 
     // Listen for recordingURL updates after call ends
     useEffect(() => {
-      if (callEnded && recordingUrlRef.current) {
+      if (callEnded) {
         // Save dialog and recording URL to db
         (async () => {
           console.log("Saving dialog with recording URL:", recordingUrlRef.current);
