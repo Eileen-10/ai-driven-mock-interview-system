@@ -190,7 +190,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
 
         
         // Call for LLM in FastAPI
-          const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/evaluate-session/", {
+          const response = await fetch("https://mockview-460317.as.r.appspot.com/evaluate-session/", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
