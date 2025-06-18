@@ -13,6 +13,7 @@ import RecordRTC from 'recordrtc'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClient } from '@supabase/supabase-js'
+import { and, eq } from 'drizzle-orm'
 
 const assemblyAI = new AssemblyAI({
   apiKey:process.env.NEXT_PUBLIC_ASSEMBLY_API_KEY
@@ -165,26 +166,56 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
       // console.log("Rating: ", feedbackJsonResponse?.feedback?.[0]?.rating)
       // console.log("Feedback: ", feedbackJsonResponse?.feedback?.[0]?.feedback)
       
-      // Store in database
+      // Search for any existing answer for this question
+      const existingAnswer = await db
+      .select()
+      .from(UserAnswer)
+      .where(
+        and(
+          eq(UserAnswer.mockIDRef, interviewData?.mockID),
+          eq(UserAnswer.question, mockInterviewQuestion[activeQuestionIndex]?.question)
+        )
+      );
+      
       if(feedbackJsonResponse){
-        const resp=await db.insert(UserAnswer)
-        .values({
-          mockIDRef:interviewData?.mockID,
-          question:mockInterviewQuestion[activeQuestionIndex]?.question,
-          suggestedAns:mockInterviewQuestion[activeQuestionIndex]?.answer,
-          userAns:transcriptText,
-          similarityScore:feedbackJsonResponse?.similarity_score,
-          rating:feedbackJsonResponse?.feedback?.[0]?.rating,
-          feedback:feedbackJsonResponse?.feedback?.[0]?.feedback,
-          audioURL:audioUrl ? audioUrl : null,
-          recordingURL:recordingURL ? recordingURL : null,
-          createdBy:user?.primaryEmailAddress?.emailAddress,
-          createdAt:moment().format('DD-MM-yyyy')
-        })
-
-        if(resp){
-          console.log("Answer & Feedback saved successfully")
+        // If got existing answer, update the answer
+        if (existingAnswer.length > 0) {
+          const resp=await db
+            .update(UserAnswer)
+            .set({
+              userAns: transcriptText,
+              similarityScore:feedbackJsonResponse?.similarity_score,
+              rating:feedbackJsonResponse?.feedback?.[0]?.rating,
+              feedback:feedbackJsonResponse?.feedback?.[0]?.feedback,
+              audioURL:audioUrl ? audioUrl : null,
+              recordingURL:recordingURL ? recordingURL : null,
+              createdAt: moment().format('DD-MM-yyyy')
+            })
+            .where(eq(UserAnswer.id, existingAnswer[0].id));
+            if(resp){
+              console.log("Answer & Feedback updated successfully")
+            }
+        } else {
+          // Else, store as new row in database
+          const resp=await db.insert(UserAnswer)
+            .values({
+              mockIDRef:interviewData?.mockID,
+              question:mockInterviewQuestion[activeQuestionIndex]?.question,
+              suggestedAns:mockInterviewQuestion[activeQuestionIndex]?.answer,
+              userAns:transcriptText,
+              similarityScore:feedbackJsonResponse?.similarity_score,
+              rating:feedbackJsonResponse?.feedback?.[0]?.rating,
+              feedback:feedbackJsonResponse?.feedback?.[0]?.feedback,
+              audioURL:audioUrl ? audioUrl : null,
+              recordingURL:recordingURL ? recordingURL : null,
+              createdBy:user?.primaryEmailAddress?.emailAddress,
+              createdAt:moment().format('DD-MM-yyyy')
+            })
+            if(resp){
+              console.log("Answer & Feedback saved successfully")
+            }
         }
+
         setAnswerTranscript('');
         setAudioURL(null);
         setAudioBlob(null);

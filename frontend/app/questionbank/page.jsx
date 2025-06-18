@@ -182,6 +182,12 @@ function QuestionBankPage() {
     const mockID = uuidv4(); 
 
     console.log(selectedQuestions)
+    const selectedQuestionObjects = selectedQuestions
+    .map((id) => questionList.find((q) => q.id === id))
+    .filter((q) => !!q);
+    const selectedQuestionsOnly = selectedQuestionObjects.map(q => q.question);
+    console.log(selectedQuestionsOnly)
+
     try {
       // Generate suggested answer for each ques
       const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/generate-suggested-answers/", {
@@ -190,7 +196,7 @@ function QuestionBankPage() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          questions: selectedQuestions,
+          questions: selectedQuestionsOnly,
           job_role: jobRole,
           job_desc: jobDesc,
         }),
