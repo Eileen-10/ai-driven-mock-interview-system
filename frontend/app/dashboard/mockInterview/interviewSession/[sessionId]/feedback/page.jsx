@@ -71,8 +71,10 @@ function Feedback({params}) {
     setFeedbackList(feedbackData)
   }
 
-  const getSessionFeedback = async (retries = 5, delay = 1000) => {
-    for (let attempt = 0; attempt < retries; attempt++) {
+  const getSessionFeedback = async (timeout = 10000, interval = 1000) => {
+    const startTime = Date.now();
+
+    const poll = async () => {
       const sessionFeedback = await db.select()
         .from(SessionFeedback)
         .where(eq(SessionFeedback.mockIDRef, params.sessionId));
@@ -83,17 +85,19 @@ function Feedback({params}) {
 
         const url = sessionFeedback[0]?.recordingURL;
         if (url) {
-          setRecordingURL(url); // Save recording URL
+          setRecordingURL(url);
         }
-
         return;
       }
 
-      // Wait before retrying
-      await new Promise(resolve => setTimeout(resolve, delay));
-    }
+      if (Date.now() - startTime < timeout) {
+        setTimeout(poll, interval);
+      } else {
+        console.warn('Session feedback not found after timeout');
+      }
+    };
 
-    console.warn('Session feedback not found after retries');
+    poll();
   };
 
   const toggleCollapsible = (index) => {

@@ -112,7 +112,7 @@ function NewInterview() {
 
             // Call for OCR & LLM from FastAPI
             // To generate Interview Questions & Suggested Answers
-            const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/generate-question", {
+            const response = await fetch("https://mockview-460317.as.r.appspot.com/generate-question", {
                 method: "POST",
                 body: formData,
             });

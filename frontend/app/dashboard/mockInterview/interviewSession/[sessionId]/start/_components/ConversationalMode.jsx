@@ -155,7 +155,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
 
     // Listen for recordingURL updates after call ends
     useEffect(() => {
-      if (callEnded && recordingUrlRef.current) {
+      if (callEnded) {
         // Save dialog and recording URL to db
         (async () => {
           console.log("Saving dialog with recording URL:", recordingUrlRef.current);
@@ -190,7 +190,7 @@ function ConversationalMode({mockInterviewQuestion, selectedCamera, setSelectedC
 
         
         // Call for LLM in FastAPI
-          const response = await fetch("https://ai-driven-mock-interview-system.onrender.com/evaluate-session/", {
+          const response = await fetch("https://mockview-460317.as.r.appspot.com/evaluate-session/", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
