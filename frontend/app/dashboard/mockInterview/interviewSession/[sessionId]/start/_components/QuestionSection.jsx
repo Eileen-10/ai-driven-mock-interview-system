@@ -77,7 +77,7 @@ function QuestionSection({mockInterviewQuestion, selectedCamera, setSelectedCame
             console.log(responses)
 
             // Call for LLM in FastAPI
-            const response = await fetch("https://mockview-460317.as.r.appspot.com/evaluate-session/", {
+            const response = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/evaluate-session/", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({

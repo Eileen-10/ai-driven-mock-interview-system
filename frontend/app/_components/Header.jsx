@@ -14,8 +14,8 @@ function Header() {
   return (
     <div className='flex h-[60px] px-4 items-center justify-between text-white'>
         <div className='flex gap-3 items-center'>
-            <Image src={'/logo.svg'} width={40} height={40} alt='logo' />
-            <h2 className='font-black'>MockView</h2>
+            <Image src={'/logo.svg'} width={60} height={60} alt='logo' />
+            <h2 className='font-black'>INTERVUE</h2>
         </div>
         <ul className='text-sm hidden md:flex gap-12'>
             <li onClick={() => router.push('/')}

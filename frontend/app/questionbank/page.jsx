@@ -111,7 +111,7 @@ function QuestionBankPage() {
 
       // Predict question type if 'not sure'
       if (newQuesType === "notsure") {
-        const predictionResp = await fetch("https://mockview-460317.as.r.appspot.com/predict-question-type/", {
+        const predictionResp = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/predict-question-type/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -129,7 +129,7 @@ function QuestionBankPage() {
 
       // Predict question category if 'not sure'
       if (newQuesCategory === "notsure") {
-        const categoryResp = await fetch("https://mockview-460317.as.r.appspot.com/predict-question-category/", {
+        const categoryResp = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/predict-question-category/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -190,7 +190,7 @@ function QuestionBankPage() {
 
     try {
       // Generate suggested answer for each ques
-      const response = await fetch("https://mockview-460317.as.r.appspot.com/generate-suggested-answers/", {
+      const response = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/generate-suggested-answers/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -411,7 +411,7 @@ function QuestionBankPage() {
         console.log(recommendationJobRole, recommendationJobDesc, numOfQues, supportDoc)
 
         // Call backend to return recommended question from question bank
-        const response = await fetch("https://mockview-460317.as.r.appspot.com/recommend-questions/", {
+        const response = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/recommend-questions/", {
             method: "POST",
             body: formData,
         });

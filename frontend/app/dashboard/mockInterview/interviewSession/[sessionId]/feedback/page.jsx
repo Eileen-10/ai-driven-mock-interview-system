@@ -84,6 +84,7 @@ function Feedback({params}) {
         setSessionFeedbackData(sessionFeedback);
 
         const url = sessionFeedback[0]?.recordingURL;
+        console.log(sessionFeedback[0]);
         if (url) {
           setRecordingURL(url);
         }
