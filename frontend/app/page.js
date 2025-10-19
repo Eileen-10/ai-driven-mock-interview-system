@@ -158,9 +158,9 @@ export default function Home() {
               <h2 className="text-2xl font-bold text-left mb-5">FAQs</h2>
               <Accordion type="single" collapsible className="w-full max-w-4xl mx-auto space-y-4">
                 <AccordionItem value="item-1">
-                  <AccordionTrigger>What is MockView?</AccordionTrigger>
+                  <AccordionTrigger>What is INTERVUE?</AccordionTrigger>
                   <AccordionContent>
-                    MockView is an AI-driven mock interview system that simulates realistic interview scenarios and provides smart feedback to help you improve.
+                    INTERVUE is an AI-driven mock interview system that simulates realistic interview scenarios and provides smart feedback to help you improve.
                   </AccordionContent>
                 </AccordionItem>
 
@@ -210,7 +210,7 @@ export default function Home() {
                   {/* Logo */}
                   <div className="flex items-center gap-3">
                     <Image src="/logo.svg" width={40} height={40} alt="logo" />
-                    <h2 className="font-black text-lg">MockView</h2>
+                    <h2 className="font-black text-lg">INTERVUE</h2>
                   </div>
 
                   {/* Links */}
@@ -241,7 +241,7 @@ export default function Home() {
 
                 {/* Bottom Row: Attribution */}
                 <div className="text-sm text-gray-400 text-center md:text-right">
-                  © {new Date().getFullYear()} Teng Eileen — Final Year Project · USM
+                  © {new Date().getFullYear()} Teng Eileen · USM
                 </div>
               </div>
             </section>
