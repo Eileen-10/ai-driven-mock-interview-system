@@ -60,23 +60,34 @@ export default function Home() {
         <div className='flex-grow shadow-lg overflow-auto' style={{ marginLeft: '20px', marginRight: '20px', marginTop: '6px', marginBottom: '20px' }}>
           <div className="flex flex-col">
             <section className="text-white px-6 md:px-16 py-20">
-              <div className="text-left max-w-3xl mx-auto">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                  Ace your interview,
-                </h1>
-                <span className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#F2465E] via-[#FF8C00] to-[#40E0D0]">
-                  Anytime, Anywhere
-                </span>
-                <p className="mt-6 text-white">
-                  Elevate your interview skills with tailored AI-driven feedback.
-                </p>
-                <Button 
-                onClick = {() => router.replace('/dashboard/home')}
-                className="mt-8 text-base bg-white text-black px-6 py-5 rounded-full font-bold hover:ring-4 hover:ring-offset-2 hover:ring-transparent 
-                  hover:bg-gray-100 transition relative 
-                  hover:shadow-[0_0_10px_3px_rgba(242,70,94,0.7),0_0_20px_6px_rgba(255,140,0,0.5),0_0_30px_9px_rgba(64,224,208,0.4)]">
-                  Explore <MoveUpRight />
-                </Button>
+              <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-12">
+                
+                <div className="md:w-1/3 w-full flex justify-center">
+                  <Image src={'/INTERVUE_girl.png'} width={150} height={150} alt='logo' />
+                </div>
+
+                <div className="md:w-2/3 w-full text-left">
+                  <p className="mb-6 text-white font-bold text-lg">
+                    Your personal interview environment
+                  </p>
+                  <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                    Ace your interview,
+                  </h1>
+                  <span className="text-3xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#2654de] to-[#40E0D0]">
+                    Anytime, Anywhere
+                  </span>
+                  <p className="mt-6 text-white">
+                    Elevate your interview skills with tailored AI-driven feedback.
+                  </p>
+                  <Button 
+                  onClick = {() => router.replace('/dashboard/home')}
+                  className="mt-8 text-base bg-white text-black px-6 py-5 rounded-full font-bold hover:ring-4 hover:ring-offset-2 hover:ring-transparent 
+                    hover:bg-gray-100 transition relative 
+                    hover:shadow-[0_0_10px_3px_rgba(242,70,94,0.7),0_0_20px_6px_rgba(255,140,0,0.5),0_0_30px_9px_rgba(64,224,208,0.4)]">
+                    Explore <MoveUpRight />
+                  </Button>
+                </div>
+                
               </div>
             </section>
           
