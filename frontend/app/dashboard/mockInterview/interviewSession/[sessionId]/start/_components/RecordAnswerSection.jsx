@@ -144,7 +144,7 @@ function RecordAnswerSection({selectedCamera, setSelectedCamera, selectedMicroph
     // Call for LLM & similarity from FastAPI
     // To calculate Similarity Score & generate Rating + Feedback
     try {
-      const response = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/evaluate-answer", {
+      const response = await fetch("https://keen-topic-475512-r4.as.r.appspot.com/evaluate-answer/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
